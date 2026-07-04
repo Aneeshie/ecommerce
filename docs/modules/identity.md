@@ -88,3 +88,71 @@
 ### Refresh Token
 - Tokens must expire
 - Tokens are stored as hashes
+
+# Workflows
+
+## User Registration
+
+### Trigger 
+- Guest submits the registration form
+
+### Flow 
+1. User enters name, email and password.
+2. Validate the input.
+3. Check if email already exists.
+4. Hash the password
+5. Create the user
+6. Generate an email verification token.
+7. Send the verification email.
+8. Return success.
+
+
+## Login
+
+### Trigger 
+- User submits email and password.
+
+## Flow
+1. Validate the request.
+2. Find the user by email.
+3. Verify the password hash.
+4. Ensure the account is active 
+5. Generate an access token.
+6. Generate a refresh token.
+7. Store the refresh token.
+8. Return both tokens.
+
+## Logout 
+
+### Trigger 
+- Authenticated user logs out.
+
+## Flow 
+1. Receive the refresh tokens.
+2. Validate the refresh tokens.
+3. Remove teh refresh token.
+4. return success.
+
+## Add Address
+
+### Trigger 
+- Authenticated user adds a new address.
+
+## Flow 
+1. Validate the address.
+2. if this is the user's first address, mark it as default.
+3. otherwise, ask whether it should become the default.
+4. Save the address.
+5. return success.
+
+## Delete Address
+
+### Trigger 
+- Authenticated user deletes an address.
+
+## Flow 
+1. Verify the address belongs to the user.
+2. Check if it is the default address .
+3. If it is the default, require the user to choose another default address.
+4. Delete the address.
+5. Return success.
