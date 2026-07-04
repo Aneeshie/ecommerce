@@ -156,3 +156,50 @@
 3. If it is the default, require the user to choose another default address.
 4. Delete the address.
 5. Return success.
+
+# Database
+
+
+## users
+
+| Column         | Type      | Constraints      |
+|----------------|-----------|------------------|
+| id             | UUID      | PK               |
+| name           | TEXT      | NOT NULL         |
+| email          | TEXT      | UNIQUE, NOT NULL |
+| password_hash  | TEXT      | NOT NULL         |
+| role           | TEXT      | NOT NULL         |
+| email_verified | BOOLEAN   | DEFAULT FALSE    |
+| created_at     | TIMESTAMP | NOT NULL         |
+| updated_at     | TIMESTAMP | NOT NULL         |
+
+## addresses
+
+| Column      | Type      | Constraints               |
+|-------------|-----------|---------------------------|
+| id          | UUID      | PK                        |
+| user_id     | UUID      | FK -> users(id), NOT NULL |
+| line_1      | TEXT      | NOT NULL                  |
+| line_2      | TEXT      | NULL                      |
+| label       | TEXT      | NOT NULL                  |
+| city        | TEXT      | NOT NULL                  |
+| state       | TEXT      | NOT NULL                  |
+| country     | TEXT      | NOT NULL                  |
+| postal_code | TEXT      | NOT NULL                  |
+| is_default  | BOOLEAN   | NOT NULL DEFAULT FALSE    |
+| created_at  | TIMESTAMP | NOT NULL                  |
+| updated_at  | TIMESTAMP | NOT NULL                  |
+
+
+## refresh_tokens
+| Column     | Type      | Constraints               |
+|------------|-----------|---------------------------|
+| id         | UUID      | PK                        |
+| user_id    | UUID      | FK -> users(id), NOT NULL |
+| token_hash | TEXT      | NOT NULL                  |
+| expires_at | TIMESTAMP | NOT NULL                  |
+| updated_at | TIMESTAMP | NOT NULL                  |
+| created_at | TIMESTAMP | NOT NULL                  |
+| revoked_at | TIMESTAMP | NULL                      |
+
+
