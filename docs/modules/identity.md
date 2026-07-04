@@ -203,3 +203,101 @@
 | revoked_at | TIMESTAMP | NULL                      |
 
 
+# API ENDPOINTS
+
+POST /auth/register
+
+Request
+```json
+    {
+      "name": "",
+      "email": "",
+      "password": ""
+    }
+```
+
+
+Response
+```json
+    {
+      "message": "Registration successful. Please verify your email."
+    }
+```
+
+
+GET /auth/verify-email?token=...
+
+POST /auth/login
+
+Request
+```json
+    {
+      "email": "",
+      "password": ""
+    }
+```
+
+Response
+```json
+    {
+      "access_token": "",
+      "refresh_token": "",
+      "expires_in": 900,
+      "user": {
+        ....
+      }
+    }
+```
+
+POST /auth/forgot-password
+
+POST /auth/reset-password
+
+POST /auth/logout
+
+Request
+```json
+    {
+      "refresh_token": ""
+    } 
+```
+
+POST /auth/refresh
+
+Request 
+```json
+    {
+      "refresh_token":  ""
+    }
+```
+
+Response 
+```json
+    {
+      "access_token": "...",
+      "expires_in": 900
+    } 
+```
+
+GET /me
+
+Response
+
+```json
+    {
+      "id": "",
+      "name": "",
+      "email": "",
+      "role": ""
+    }
+```
+
+PATCH /me
+
+GET /me/addresses
+
+POST  /me/addresses
+
+DELETE /me/addresses/{addressID}
+
+PATCH /me/addresses/{addressID}
