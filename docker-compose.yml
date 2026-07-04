@@ -1,12 +1,18 @@
 services:
   db:
-    image: postgres:latest
+    image: postgres:18
+    container_name: ecommerce
     restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secretpass
-      POSTGRES_DB: ecommerce
-    volumes:
-      - ./data:/var/lib/postgresql
     ports:
-      - 5432:5432
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: mydatabase
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    shm_size: 128mb
+
+volumes:
+  postgres_data:
+

@@ -8,4 +8,4 @@ logs:
 	docker compose logs -f db
 
 psql:
-	docker compose exec db psql -U postgres -d ecommerce
+	docker compose exec db psql -U myuser -d mydatabase
