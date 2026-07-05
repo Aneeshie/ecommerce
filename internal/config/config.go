@@ -8,7 +8,8 @@ import (
 )
 
 type Config struct {
-	DatabaseURL string
+	DatabaseURL   string
+	ServerAddress string
 }
 
 func Load() (*Config, error) {
@@ -16,11 +17,17 @@ func Load() (*Config, error) {
 
 	dbURL := os.Getenv("DATABASE_URL")
 
+	serverAddress := os.Getenv("SERVER_ADDRESS")
+	if serverAddress == "" {
+		serverAddress = ":8080"
+	}
+
 	if dbURL == "" {
 		return nil, errors.New("DATABASE_URL is required")
 	}
 
 	return &Config{
-		DatabaseURL: dbURL,
+		DatabaseURL:   dbURL,
+		ServerAddress: serverAddress,
 	}, nil
 }
