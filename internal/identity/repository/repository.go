@@ -59,6 +59,31 @@ func (r *Repository) FindByEmail(ctx context.Context, email string) (domain.User
 		&user.UpdatedAt,
 	)
 
-	return domain.User{}, fmt.Errorf("find user by email: %w", err)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("find user by email: %w", err)
+	}
 
+	return user, nil
+
+}
+
+func (r *Repository) CreateRefreshToken(ctx context.Context, token domain.RefreshToken) error {
+	query := `
+	INSERT INTO refresh_tokens (
+	id,
+	user_id,
+	token_hash,
+	expires_at,
+	created_at,
+	revoked_at
+	)
+	VALUES ($1, $2, $3, $4, $5, $6);
+	`
+	_, err := r.db.Exec(ctx, query, token.ID, token.UserID, token.TokenHash, token.ExpiresAt, token.CreatedAt, token.RevokedAt)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
