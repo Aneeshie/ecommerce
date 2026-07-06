@@ -6,6 +6,6 @@ CREATE TABLE users (
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL,
     email_verified BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL,    
+    created_at TIMESTAMP NOT NULL,
     updated_at TIMESTAMP NOT NULL
 )
