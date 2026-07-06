@@ -4,12 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/Aneeshie/ecommerce/internal/identity/domain"
 	"github.com/Aneeshie/ecommerce/internal/identity/dto"
 	"github.com/Aneeshie/ecommerce/internal/identity/password"
 	"github.com/Aneeshie/ecommerce/internal/identity/repository"
+	"github.com/Aneeshie/ecommerce/internal/identity/token"
 	"github.com/Aneeshie/ecommerce/internal/identity/validator"
 	"github.com/google/uuid"
 )
@@ -19,13 +21,20 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
+const (
+    AccessTokenTTL  = 15 * time.Minute
+    RefreshTokenTTL = 30 * 24 * time.Hour
+)
+
 type Service struct {
 	repo *repository.Repository
+	tokenManager *token.Manager
 }
 
-func NewService(repo *repository.Repository) *Service{
+func NewService(repo *repository.Repository, tokenManager *token.Manager) *Service{
 	return &Service{
 		repo: repo,
+		tokenManager: tokenManager,
 	}
 }
 
@@ -68,4 +77,64 @@ func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
 	}
 
 	return nil
+}
+
+func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error){
+	now := time.Now()
+	//check if user exists in first place
+	user, err := s.repo.FindByEmail(ctx, req.Email)
+	if err != nil {
+		log.Println("find email failure", err)
+		return dto.LoginResponse{},ErrInvalidCredentials
+	}
+
+	// check if the password entered is correct
+	isValid := password.CompareHash(req.Password, user.PasswordHash)
+
+	if !isValid {
+		log.Println("password comparison failure")
+		return dto.LoginResponse{},ErrInvalidCredentials
+	}
+
+	// generate access token
+	accessToken, err := s.tokenManager.GenerateAccessToken(user, AccessTokenTTL)
+
+	if err != nil {
+
+		return dto.LoginResponse{},err
+	}
+
+	// generate refresh token
+	rawRefreshToken, err := s.tokenManager.GenerateRefreshToken()
+	if err != nil {
+
+		return dto.LoginResponse{},err
+	}
+
+	// hash refresh token
+	hashedRefreshToken := s.tokenManager.HashRefreshToken(rawRefreshToken)
+
+	// create refreshToken entity
+	refreshToken := domain.RefreshToken{
+		ID: uuid.New(),
+		UserID: user.ID,
+		TokenHash: hashedRefreshToken,
+		ExpiresAt: now.Add(RefreshTokenTTL),
+		CreatedAt: now,
+		RevokedAt: nil,
+	}
+
+	//call the repo thingy (put it in the database)
+	err = s.repo.CreateRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return dto.LoginResponse{},err
+	}
+	//return loginResponse
+
+	return dto.LoginResponse{
+		AccessToken: accessToken,
+		RefreshToken: rawRefreshToken,
+		ExpiresIn: int(AccessTokenTTL),
+	}, nil
+
 }
