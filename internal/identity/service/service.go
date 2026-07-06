@@ -17,23 +17,24 @@ import (
 )
 
 var (
-	ErrEmailAlreadyExists = errors.New("email already exists")
-	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrEmailAlreadyExists  = errors.New("email already exists")
+	ErrInvalidCredentials  = errors.New("invalid credentials")
+	ErrInvalidRefreshToken = errors.New("Invalid Refresh Token")
 )
 
 const (
-    AccessTokenTTL  = 15 * time.Minute
-    RefreshTokenTTL = 30 * 24 * time.Hour
+	AccessTokenTTL  = 15 * time.Minute
+	RefreshTokenTTL = 30 * 24 * time.Hour
 )
 
 type Service struct {
-	repo *repository.Repository
+	repo         *repository.Repository
 	tokenManager *token.Manager
 }
 
-func NewService(repo *repository.Repository, tokenManager *token.Manager) *Service{
+func NewService(repo *repository.Repository, tokenManager *token.Manager) *Service {
 	return &Service{
-		repo: repo,
+		repo:         repo,
 		tokenManager: tokenManager,
 	}
 }
@@ -79,13 +80,13 @@ func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
 	return nil
 }
 
-func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error){
+func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error) {
 	now := time.Now()
 	//check if user exists in first place
 	user, err := s.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
 		log.Println("find email failure", err)
-		return dto.LoginResponse{},ErrInvalidCredentials
+		return dto.LoginResponse{}, ErrInvalidCredentials
 	}
 
 	// check if the password entered is correct
@@ -93,7 +94,7 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 
 	if !isValid {
 		log.Println("password comparison failure")
-		return dto.LoginResponse{},ErrInvalidCredentials
+		return dto.LoginResponse{}, ErrInvalidCredentials
 	}
 
 	// generate access token
@@ -101,14 +102,14 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 
 	if err != nil {
 
-		return dto.LoginResponse{},err
+		return dto.LoginResponse{}, err
 	}
 
 	// generate refresh token
 	rawRefreshToken, err := s.tokenManager.GenerateRefreshToken()
 	if err != nil {
 
-		return dto.LoginResponse{},err
+		return dto.LoginResponse{}, err
 	}
 
 	// hash refresh token
@@ -116,8 +117,8 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 
 	// create refreshToken entity
 	refreshToken := domain.RefreshToken{
-		ID: uuid.New(),
-		UserID: user.ID,
+		ID:        uuid.New(),
+		UserID:    user.ID,
 		TokenHash: hashedRefreshToken,
 		ExpiresAt: now.Add(RefreshTokenTTL),
 		CreatedAt: now,
@@ -127,14 +128,45 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 	//call the repo thingy (put it in the database)
 	err = s.repo.CreateRefreshToken(ctx, refreshToken)
 	if err != nil {
-		return dto.LoginResponse{},err
+		return dto.LoginResponse{}, err
 	}
 	//return loginResponse
 
 	return dto.LoginResponse{
-		AccessToken: accessToken,
+		AccessToken:  accessToken,
 		RefreshToken: rawRefreshToken,
-		ExpiresIn: int(AccessTokenTTL),
+		ExpiresIn:    int(AccessTokenTTL.Seconds()),
+	}, nil
+
+}
+
+func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.RefreshResponse, error) {
+	hashedRefreshToken := s.tokenManager.HashRefreshToken(req.RefreshToken)
+
+	refreshToken, err := s.repo.FindRefreshTokenByHash(ctx, hashedRefreshToken)
+
+	if refreshToken.RevokedAt != nil {
+		return dto.RefreshResponse{}, ErrInvalidRefreshToken
+	}
+
+	if time.Now().After(refreshToken.ExpiresAt) {
+		return dto.RefreshResponse{}, ErrInvalidRefreshToken
+	}
+
+	user, err := s.repo.FindByID(ctx, refreshToken.UserID)
+	if err != nil {
+		return dto.RefreshResponse{}, err
+	}
+
+	// generate new access token
+	accessToken, err := s.tokenManager.GenerateAccessToken(user, AccessTokenTTL)
+	if err != nil {
+		return dto.RefreshResponse{}, err
+	}
+	//return dto.RefreshReponse
+	return dto.RefreshResponse{
+		AccessToken: accessToken,
+		ExpiresIn:   int(AccessTokenTTL.Seconds()),
 	}, nil
 
 }

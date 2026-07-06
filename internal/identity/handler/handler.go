@@ -19,6 +19,7 @@ type Handler struct {
 func RegisterRoutes(r chi.Router, h *Handler) {
 	r.Post("/auth/register", h.Register)
 	r.Post("/auth/login", h.Login)
+	r.Post("/auth/refresh", h.Refresh)
 }
 
 func NewHandler(s *service.Service) *Handler {
@@ -94,5 +95,36 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("failed to encode login response: %v", err)
+	}
+}
+
+func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var req dto.RefreshRequest
+
+	defer r.Body.Close()
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := h.service.Refresh(r.Context(), req)
+
+	if errors.Is(err, service.ErrInvalidRefreshToken) {
+		http.Error(w, "Invalid refresh token", http.StatusUnauthorized)
+		return
+	}
+
+	if err != nil {
+		log.Printf("refresh failed: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("failed to encode refresh response: %v", err)
 	}
 }

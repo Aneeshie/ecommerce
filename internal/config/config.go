@@ -10,12 +10,15 @@ import (
 type Config struct {
 	DatabaseURL   string
 	ServerAddress string
+	JwtSecret     string
 }
 
 func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	dbURL := os.Getenv("DATABASE_URL")
+
+	JwtSecret := os.Getenv("JWT_SECRET")
 
 	serverAddress := os.Getenv("SERVER_ADDRESS")
 	if serverAddress == "" {
@@ -26,8 +29,13 @@ func Load() (*Config, error) {
 		return nil, errors.New("DATABASE_URL is required")
 	}
 
+	if JwtSecret == "" {
+		return nil, errors.New("JWT_SECRET is required")
+	}
+
 	return &Config{
 		DatabaseURL:   dbURL,
 		ServerAddress: serverAddress,
+		JwtSecret:     JwtSecret,
 	}, nil
 }

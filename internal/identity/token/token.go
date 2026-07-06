@@ -13,10 +13,10 @@ import (
 
 func (m *Manager) GenerateAccessToken(user domain.User, AccessTokenTTL time.Duration) (string, error) {
 	claims := jwt.MapClaims{
-		"sub": user.ID.String(),
+		"sub":  user.ID.String(),
 		"role": user.Role,
-		"exp": time.Now().Add(AccessTokenTTL).Unix(),
-		"iat": time.Now().Unix(),
+		"exp":  time.Now().Add(AccessTokenTTL).Unix(),
+		"iat":  time.Now().Unix(),
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
@@ -28,7 +28,7 @@ func (m *Manager) GenerateAccessToken(user domain.User, AccessTokenTTL time.Dura
 	return accessToken, nil
 }
 
-func (m *Manager) GenerateRefreshToken() (string, error){
+func (m *Manager) GenerateRefreshToken() (string, error) {
 	token := make([]byte, 32)
 
 	_, err := rand.Read(token)
@@ -40,7 +40,6 @@ func (m *Manager) GenerateRefreshToken() (string, error){
 
 	return base64String, nil
 }
-
 
 func (m *Manager) HashRefreshToken(token string) string {
 	bytesResult := sha256.Sum256([]byte(token))
