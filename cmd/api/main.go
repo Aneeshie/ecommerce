@@ -5,11 +5,12 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/Aneeshie/ecommerce/internal/config"
+	"github.com/Aneeshie/ecommerce/internal/database"
 	"github.com/Aneeshie/ecommerce/internal/identity/handler"
 	"github.com/Aneeshie/ecommerce/internal/identity/repository"
 	"github.com/Aneeshie/ecommerce/internal/identity/service"
-	"github.com/Aneeshie/ecommerce/internal/config"
-	"github.com/Aneeshie/ecommerce/internal/database"
+	"github.com/Aneeshie/ecommerce/internal/identity/token"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 )
@@ -29,7 +30,9 @@ func main() {
 
 	identityRepository := repository.NewRepository(pool)
 
-	identityService := service.NewService(identityRepository)
+	identityManager := token.NewManager(cfg.JwtSecret)
+
+	identityService := service.NewService(identityRepository, identityManager)
 
 	identityHandler := handler.NewHandler(identityService)
 

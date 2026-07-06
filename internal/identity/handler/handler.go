@@ -18,6 +18,7 @@ type Handler struct {
 
 func RegisterRoutes(r chi.Router, h *Handler) {
 	r.Post("/auth/register", h.Register)
+	r.Post("/auth/login", h.Login)
 }
 
 func NewHandler(s *service.Service) *Handler {
@@ -43,16 +44,15 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	err = h.service.Register(r.Context(), req)
 
 	if err != nil {
-    log.Printf("register error: %+v\n", err)
-    http.Error(w, "Internal server error", http.StatusInternalServerError)
-    return
+		log.Printf("register error: %+v\n", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
 	}
 
 	if errors.Is(err, service.ErrEmailAlreadyExists) {
 		http.Error(w, "Email already exists", http.StatusConflict)
 		return
 	}
-
 
 	w.Header().Set("Content-Type", "application/json")
 
@@ -62,4 +62,37 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		Message: "User registered successfully",
 	}
 	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	var req dto.LoginRequest
+
+	defer r.Body.Close()
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		return
+	}
+
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
+	resp, err := h.service.Login(r.Context(), req)
+
+	if errors.Is(err, service.ErrInvalidCredentials) {
+		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	if err != nil {
+		log.Printf("login failed: %v", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("failed to encode login response: %v", err)
+	}
 }
