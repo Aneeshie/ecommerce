@@ -170,3 +170,17 @@ func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.Refr
 	}, nil
 
 }
+
+func (s *Service) GetCurrentUser(ctx context.Context, userId uuid.UUID) (*dto.MeResponse, error) {
+	user, err := s.repo.FindByID(ctx, userId)
+	if err != nil {
+		return &dto.MeResponse{}, err
+	}
+
+	return &dto.MeResponse{
+		ID:    user.ID,
+		Name:  user.Name,
+		Email: user.Email,
+		Role:  user.Role,
+	}, nil
+}

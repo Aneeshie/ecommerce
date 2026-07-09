@@ -9,17 +9,21 @@ import (
 
 	"github.com/Aneeshie/ecommerce/internal/identity/dto"
 	"github.com/Aneeshie/ecommerce/internal/identity/service"
+	"github.com/Aneeshie/ecommerce/internal/middleware"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 type Handler struct {
 	service *service.Service
 }
 
-func RegisterRoutes(r chi.Router, h *Handler) {
+func RegisterRoutes(r chi.Router, h *Handler, auth *middleware.AuthMiddleware) {
 	r.Post("/auth/register", h.Register)
 	r.Post("/auth/login", h.Login)
 	r.Post("/auth/refresh", h.Refresh)
+
+	r.With(auth.Auth).Get("/auth/me", h.Me)
 }
 
 func NewHandler(s *service.Service) *Handler {
@@ -127,4 +131,34 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("failed to encode refresh response: %v", err)
 	}
+}
+
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+	claims, ok := middleware.ClaimsFromContext(r.Context())
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	userID, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		log.Printf("Could not parse user Id from claims: %v ", err)
+		return
+	}
+
+	user, err := h.service.GetCurrentUser(r.Context(), userID)
+	if err != nil {
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		log.Printf("Failed to get the current user: %v", err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(user); err != nil {
+		log.Printf("failed to encode refresh response: %v", err)
+	}
+
 }
