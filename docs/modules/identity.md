@@ -49,8 +49,8 @@
 - updated_at
 
 ### Address
-- id 
-- user_id 
+- id
+- user_id
 - line1
 - line2
 - city
@@ -77,7 +77,7 @@
 
 ## Constraints
 
-### User 
+### User
 - Email must be unique
 - Password is stored as hash
 - role = 'Admin' | 'Customer'
@@ -93,10 +93,10 @@
 
 ## User Registration
 
-### Trigger 
+### Trigger
 - Guest submits the registration form
 
-### Flow 
+### Flow
 1. User enters name, email and password.
 2. Validate the input.
 3. Check if email already exists.
@@ -109,25 +109,25 @@
 
 ## Login
 
-### Trigger 
+### Trigger
 - User submits email and password.
 
 ## Flow
 1. Validate the request.
 2. Find the user by email.
 3. Verify the password hash.
-4. Ensure the account is active 
+4. Ensure the account is active
 5. Generate an access token.
 6. Generate a refresh token.
 7. Store the refresh token.
 8. Return both tokens.
 
-## Logout 
+## Logout
 
-### Trigger 
+### Trigger
 - Authenticated user logs out.
 
-## Flow 
+## Flow
 1. Receive the refresh tokens.
 2. Validate the refresh tokens.
 3. Remove teh refresh token.
@@ -135,10 +135,10 @@
 
 ## Add Address
 
-### Trigger 
+### Trigger
 - Authenticated user adds a new address.
 
-## Flow 
+## Flow
 1. Validate the address.
 2. if this is the user's first address, mark it as default.
 3. otherwise, ask whether it should become the default.
@@ -147,10 +147,10 @@
 
 ## Delete Address
 
-### Trigger 
+### Trigger
 - Authenticated user deletes an address.
 
-## Flow 
+## Flow
 1. Verify the address belongs to the user.
 2. Check if it is the default address .
 3. If it is the default, require the user to choose another default address.
@@ -259,24 +259,24 @@ Request
 ```json
     {
       "refresh_token": ""
-    } 
+    }
 ```
 
 POST /auth/refresh
 
-Request 
+Request
 ```json
     {
       "refresh_token":  ""
     }
 ```
 
-Response 
+Response
 ```json
     {
       "access_token": "...",
       "expires_in": 900
-    } 
+    }
 ```
 
 GET /me
@@ -301,3 +301,136 @@ POST  /me/addresses
 DELETE /me/addresses/{addressID}
 
 PATCH /me/addresses/{addressID}
+
+
+# Authentication Middleware Design
+
+## Goal
+
+Protect routes by verifying the user's JWT before the request reaches the handler.
+
+---
+
+## Responsibilities
+
+- Read the `Authorization` header.
+- Validate the `Bearer` token format.
+- Verify the JWT signature.
+- Verify the token has not expired.
+- Extract the JWT claims.
+- Store the claims in the request context.
+- Pass the request to the next middleware/handler.
+
+---
+
+## Non-Responsibilities
+
+The middleware should **not**:
+
+- Query the database.
+- Check whether the user is an admin.
+- Perform business logic.
+- Generate tokens.
+
+These belong elsewhere.
+
+---
+
+## Request Flow
+
+Incoming Request
+
+↓
+
+Read `Authorization` header
+
+↓
+
+Missing?
+
+→ Return `401 Unauthorized`
+
+↓
+
+Validate `Bearer <token>` format
+
+↓
+
+Extract JWT
+
+↓
+
+Verify signature
+
+↓
+
+Verify expiration
+
+↓
+
+Extract claims
+
+↓
+
+Store claims in request context
+
+↓
+
+Call `next.ServeHTTP()`
+
+---
+
+## Claims
+
+The middleware should extract:
+
+- User ID (`sub`)
+- Role
+- Issued At (`iat`)
+- Expiration (`exp`)
+
+---
+
+## Error Cases
+
+| Condition | Response |
+|-----------|----------|
+| Missing Authorization header | 401 |
+| Invalid Bearer format | 401 |
+| Invalid signature | 401 |
+| Expired token | 401 |
+| Malformed JWT | 401 |
+
+---
+
+## Context
+
+The middleware should attach the authenticated user's claims to the request context.
+
+Handlers should retrieve authentication information from the context instead of parsing the JWT again.
+
+---
+
+## Public Routes
+
+Authentication middleware should **not** protect:
+
+- POST `/auth/register`
+- POST `/auth/login`
+- POST `/auth/refresh`
+
+---
+
+## Protected Routes
+
+Examples:
+
+- GET `/auth/me`
+- POST `/products`
+- PUT `/products/{id}`
+- DELETE `/products/{id}`
+- POST `/orders`
+- GET `/cart`
+
+---
+
