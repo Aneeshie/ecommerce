@@ -12,11 +12,16 @@
     pkgs = import nixpkgs {
       inherit system;
     };
+
+    go-migrate-pg = pkgs.go-migrate.overrideAttrs (old: {
+      tags = [ "postgres" ];
+    });
+
   in {
     devShells.${system}.default = pkgs.mkShell {
       packages = with pkgs; [
         go
-        go-migrate
+        go-migrate-pg
 
         git
         gnumake

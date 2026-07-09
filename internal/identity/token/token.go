@@ -5,6 +5,8 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Aneeshie/ecommerce/internal/identity/domain"
@@ -47,4 +49,23 @@ func (m *Manager) HashRefreshToken(token string) string {
 	hexResult := hex.EncodeToString(bytesResult[:])
 
 	return hexResult
+}
+
+func (m *Manager) VerifyAccessToken(tokenString string) (*CustomClaims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return m.secret, nil
+
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {
+		return claims, nil
+	}
+	return nil, errors.New("invalid token")
 }

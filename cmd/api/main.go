@@ -7,6 +7,7 @@ import (
 
 	"github.com/Aneeshie/ecommerce/internal/config"
 	"github.com/Aneeshie/ecommerce/internal/database"
+	md "github.com/Aneeshie/ecommerce/internal/middleware"
 	"github.com/Aneeshie/ecommerce/internal/identity/handler"
 	"github.com/Aneeshie/ecommerce/internal/identity/repository"
 	"github.com/Aneeshie/ecommerce/internal/identity/service"
@@ -36,10 +37,12 @@ func main() {
 
 	identityHandler := handler.NewHandler(identityService)
 
+	authMiddleware := md.NewAuthMiddleware(identityManager)
+
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 
-	handler.RegisterRoutes(r, identityHandler)
+	handler.RegisterRoutes(r, identityHandler, authMiddleware)
 
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		log.Fatal(err)
