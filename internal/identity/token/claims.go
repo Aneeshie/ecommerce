@@ -6,6 +6,6 @@ import (
 )
 
 type CustomClaims struct {
-	Role   domain.Role `json:"role"`
+	Role domain.Role `json:"role"`
 	jwt.RegisteredClaims
 }

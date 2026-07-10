@@ -49,7 +49,6 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	err = h.service.Register(r.Context(), req)
 
 	if err != nil {
-		log.Printf("register error: %+v\n", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -89,7 +88,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		log.Printf("login failed: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -120,7 +118,6 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		log.Printf("refresh failed: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -143,14 +140,12 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	userID, err := uuid.Parse(claims.Subject)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		log.Printf("Could not parse user Id from claims: %v ", err)
 		return
 	}
 
 	user, err := h.service.GetCurrentUser(r.Context(), userID)
 	if err != nil {
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		log.Printf("Failed to get the current user: %v", err)
 		return
 	}
 

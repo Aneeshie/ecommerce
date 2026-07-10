@@ -7,14 +7,14 @@ import (
 
 	"github.com/Aneeshie/ecommerce/internal/config"
 	"github.com/Aneeshie/ecommerce/internal/database"
-	md "github.com/Aneeshie/ecommerce/internal/middleware"
 	"github.com/Aneeshie/ecommerce/internal/identity/handler"
-	productHandle "github.com/Aneeshie/ecommerce/internal/product/handler"
 	"github.com/Aneeshie/ecommerce/internal/identity/repository"
-	productRepo "github.com/Aneeshie/ecommerce/internal/product/repository"
 	"github.com/Aneeshie/ecommerce/internal/identity/service"
-	productServices "github.com/Aneeshie/ecommerce/internal/product/service"
 	"github.com/Aneeshie/ecommerce/internal/identity/token"
+	md "github.com/Aneeshie/ecommerce/internal/middleware"
+	productHandle "github.com/Aneeshie/ecommerce/internal/product/handler"
+	productRepo "github.com/Aneeshie/ecommerce/internal/product/repository"
+	productServices "github.com/Aneeshie/ecommerce/internal/product/service"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 )

@@ -9,5 +9,3 @@ type ProductResponse struct {
 	Price       int64     `json:"price"`
 	Status      string    `json:"status"`
 }
-
-

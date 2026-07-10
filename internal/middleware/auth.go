@@ -13,7 +13,7 @@ type AuthMiddleware struct {
 	tokenManager *token.Manager
 }
 
-func NewAuthMiddleware(manager *token.Manager) *AuthMiddleware{
+func NewAuthMiddleware(manager *token.Manager) *AuthMiddleware {
 	return &AuthMiddleware{
 		tokenManager: manager,
 	}
@@ -21,7 +21,7 @@ func NewAuthMiddleware(manager *token.Manager) *AuthMiddleware{
 
 func (a *AuthMiddleware) Auth(next http.Handler) http.Handler {
 
-	return http.HandlerFunc(func (w http.ResponseWriter, r *http.Request){
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		tokenString, err := extractBearerToken(r)
 		if err != nil {
@@ -30,20 +30,19 @@ func (a *AuthMiddleware) Auth(next http.Handler) http.Handler {
 		}
 
 		customClaims, err := a.tokenManager.VerifyAccessToken(tokenString)
-		if err != nil  {
+		if err != nil {
 			http.Error(w, "Authorization header missing", http.StatusUnauthorized)
 			return
 		}
 
 		ctx := context.WithValue(r.Context(), claimsContextKey, customClaims)
 
-
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 
 }
 
-func extractBearerToken(r *http.Request) (string,error) {
+func extractBearerToken(r *http.Request) (string, error) {
 	authHeader := r.Header.Get("Authorization")
 	if authHeader == "" {
 		return "", fmt.Errorf("empty jwt token")
@@ -56,5 +55,3 @@ func extractBearerToken(r *http.Request) (string,error) {
 
 	return parts[1], nil
 }
-
-
