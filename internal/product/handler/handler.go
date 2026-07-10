@@ -9,6 +9,7 @@ import (
 	"github.com/Aneeshie/ecommerce/internal/product/dto"
 	"github.com/Aneeshie/ecommerce/internal/product/service"
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
 const LIMIT=20
@@ -26,6 +27,7 @@ func NewHandler(service *service.Service) *Handler {
 func RegisterRoutes(r chi.Router, h *Handler) {
 	r.Post("/api/v1/products", h.CreateProduct)
 	r.Get("/api/v1/products", h.ListProducts)
+	r.Get("/api/v1/products/{id}", h.GetProduct)
 }
 
 func (h *Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
@@ -59,6 +61,29 @@ func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.service.CreateProduct(r.Context(), &req)
 	if err != nil {
 		http.Error(w, "Internal server Error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("failed to enode response: %v", err)
+	}
+}
+
+func (h *Handler) GetProduct(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	productID, err := uuid.Parse(id)
+	if err != nil {
+		http.Error(w, "Invalid product ID", http.StatusBadRequest)
+		return
+	}
+
+	resp, err := h.service.GetProductById(r.Context(), productID)
+	if err != nil	{
+		http.Error(w, "Failed to get the product", http.StatusInternalServerError)
 		return
 	}
 

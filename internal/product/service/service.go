@@ -83,3 +83,18 @@ func (s *Service) ListProducts (ctx context.Context, limit int64) ([]*dto.Produc
 
 	return response, nil
 }
+
+func (s *Service) GetProductById (ctx context.Context, productId uuid.UUID) (*dto.ProductResponse, error) {
+	product, err := s.repo.GetProductByID(ctx, productId)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.ProductResponse {
+		ID: product.ID,
+		Name: product.Name,
+		Description: product.Description,
+		Price: product.Price.Amount(),
+		Status: string(product.Status),
+	}, nil
+}
