@@ -7,12 +7,12 @@ import (
 	"github.com/google/uuid"
 )
 
-type Product struct{
-	ID uuid.UUID
-	Name string
+type Product struct {
+	ID          uuid.UUID
+	Name        string
 	Description string
-	Price money.Money
-	Status Status
+	Price       money.Money
+	Status      Status
 
 	CreatedAt time.Time
 	UpdatedAt time.Time

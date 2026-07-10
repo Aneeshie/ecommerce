@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/Aneeshie/ecommerce/internal/common/money"
 	"github.com/Aneeshie/ecommerce/internal/product/domain"
@@ -121,6 +122,18 @@ func (r *Repository) UpdateProduct(ctx context.Context, product *domain.Product)
 		product.UpdatedAt,
 		product.ID,
 	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Repository) DeleteProduct(ctx context.Context, productID uuid.UUID) error {
+
+	query := `UPDATE products SET status='ARCHIVED', updated_at = $1 WHERE id=$2`
+
+	_, err := r.db.Exec(ctx, query, time.Now(), productID)
 	if err != nil {
 		return err
 	}

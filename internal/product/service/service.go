@@ -14,22 +14,22 @@ import (
 )
 
 var (
-	ErrEmptyProductName = errors.New("Product name cannot be empty")
-	ErrEmptyProductDescription =  errors.New("Product description cannot be empty")
+	ErrEmptyProductName        = errors.New("Product name cannot be empty")
+	ErrEmptyProductDescription = errors.New("Product description cannot be empty")
 )
 
 type Service struct {
 	repo *repository.Repository
 }
 
-func NewService(repo *repository.Repository) *Service{
+func NewService(repo *repository.Repository) *Service {
 	return &Service{
 		repo: repo,
 	}
 }
 
 func (s *Service) CreateProduct(ctx context.Context, req *dto.CreateProductRequest) (*dto.CreateProductResponse, error) {
-	amount, err  := money.New(req.Price)
+	amount, err := money.New(req.Price)
 	if err != nil {
 		return nil, money.ErrNegativeAmount
 	}
@@ -43,11 +43,11 @@ func (s *Service) CreateProduct(ctx context.Context, req *dto.CreateProductReque
 	}
 
 	product := domain.Product{
-		ID: uuid.New(),
-		Name: req.Name,
+		ID:          uuid.New(),
+		Name:        req.Name,
 		Description: req.Description,
-		Price: amount,
-		Status: domain.ProductStatusActive,
+		Price:       amount,
+		Status:      domain.ProductStatusActive,
 
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
@@ -63,7 +63,7 @@ func (s *Service) CreateProduct(ctx context.Context, req *dto.CreateProductReque
 	}, nil
 }
 
-func (s *Service) ListProducts (ctx context.Context, limit int64) ([]*dto.ProductResponse, error){
+func (s *Service) ListProducts(ctx context.Context, limit int64) ([]*dto.ProductResponse, error) {
 	products, err := s.repo.ListProducts(ctx, limit)
 	if err != nil {
 		return nil, err
@@ -73,33 +73,33 @@ func (s *Service) ListProducts (ctx context.Context, limit int64) ([]*dto.Produc
 
 	for _, product := range products {
 		response = append(response, &dto.ProductResponse{
-			ID: product.ID,
-			Name: product.Name,
+			ID:          product.ID,
+			Name:        product.Name,
 			Description: product.Description,
-			Price: product.Price.Amount(),
-			Status: string(product.Status),
+			Price:       product.Price.Amount(),
+			Status:      string(product.Status),
 		})
 	}
 
 	return response, nil
 }
 
-func (s *Service) GetProductById (ctx context.Context, productId uuid.UUID) (*dto.ProductResponse, error) {
+func (s *Service) GetProductById(ctx context.Context, productId uuid.UUID) (*dto.ProductResponse, error) {
 	product, err := s.repo.GetProductByID(ctx, productId)
 	if err != nil {
 		return nil, err
 	}
 
-	return &dto.ProductResponse {
-		ID: product.ID,
-		Name: product.Name,
+	return &dto.ProductResponse{
+		ID:          product.ID,
+		Name:        product.Name,
 		Description: product.Description,
-		Price: product.Price.Amount(),
-		Status: string(product.Status),
+		Price:       product.Price.Amount(),
+		Status:      string(product.Status),
 	}, nil
 }
 
-func (s *Service) UpdateProduct (ctx context.Context, productID uuid.UUID, product *dto.UpdateProductRequest) error {
+func (s *Service) UpdateProduct(ctx context.Context, productID uuid.UUID, product *dto.UpdateProductRequest) error {
 	existing, err := s.repo.GetProductByID(ctx, productID)
 	if err != nil {
 		return err
@@ -113,7 +113,7 @@ func (s *Service) UpdateProduct (ctx context.Context, productID uuid.UUID, produ
 		return ErrEmptyProductDescription
 	}
 
-	amount, err  := money.New(product.Price)
+	amount, err := money.New(product.Price)
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,11 @@ func (s *Service) UpdateProduct (ctx context.Context, productID uuid.UUID, produ
 	existing.Name = product.Name
 	existing.Description = product.Description
 	existing.Price = amount
-	existing.UpdatedAt=  time.Now()
+	existing.UpdatedAt = time.Now()
 
 	return s.repo.UpdateProduct(ctx, existing)
+}
+
+func (s *Service) DeleteProduct(ctx context.Context, productID uuid.UUID) error {
+	return s.repo.DeleteProduct(ctx, productID)
 }

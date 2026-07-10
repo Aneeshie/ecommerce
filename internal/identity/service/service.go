@@ -85,7 +85,6 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 	//check if user exists in first place
 	user, err := s.repo.FindByEmail(ctx, req.Email)
 	if err != nil {
-		log.Println("find email failure", err)
 		return dto.LoginResponse{}, ErrInvalidCredentials
 	}
 
@@ -93,7 +92,6 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 	isValid := password.CompareHash(req.Password, user.PasswordHash)
 
 	if !isValid {
-		log.Println("password comparison failure")
 		return dto.LoginResponse{}, ErrInvalidCredentials
 	}
 

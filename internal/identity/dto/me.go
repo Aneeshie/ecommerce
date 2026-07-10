@@ -6,8 +6,8 @@ import (
 )
 
 type MeResponse struct {
-    ID    uuid.UUID   `json:"id"`
-    Name  string      `json:"name"`
-    Email string      `json:"email"`
-    Role  domain.Role `json:"role"`
+	ID    uuid.UUID   `json:"id"`
+	Name  string      `json:"name"`
+	Email string      `json:"email"`
+	Role  domain.Role `json:"role"`
 }

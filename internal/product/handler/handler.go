@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const LIMIT=20
+const LIMIT = 20
 
 type Handler struct {
 	service *service.Service
@@ -29,6 +29,7 @@ func RegisterRoutes(r chi.Router, h *Handler) {
 	r.Get("/api/v1/products", h.ListProducts)
 	r.Get("/api/v1/products/{id}", h.GetProduct)
 	r.Put("/api/v1/products/{id}", h.UpdateProduct)
+	r.Delete("/api/v1/products/{id}", h.DeleteProduct)
 }
 
 func (h *Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
@@ -83,7 +84,7 @@ func (h *Handler) GetProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, err := h.service.GetProductById(r.Context(), productID)
-	if err != nil	{
+	if err != nil {
 		http.Error(w, "Failed to get the product", http.StatusInternalServerError)
 		return
 	}
@@ -116,24 +117,41 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	//modify the product
 	err = h.service.UpdateProduct(r.Context(), productID, &req)
 
-	if err != nil	{
+	if err != nil {
 		http.Error(w, "Failed to update the product", http.StatusInternalServerError)
-		log.Printf("error in update product: %v", err)
 		return
 	}
 
 	resp, err := h.service.GetProductById(r.Context(), productID)
-	if err != nil	{
+	if err != nil {
 		http.Error(w, "Failed to get the product", http.StatusInternalServerError)
-		log.Printf("error in update product: %v", err)
 		return
 	}
 
-	w.Header().Set("Content-Type","application/json")
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("failed to enode response: %v", err)
 	}
+}
+
+func (h *Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	productID, err := uuid.Parse(id)
+	if err != nil {
+		http.Error(w, "Invalid product ID", http.StatusBadRequest)
+		return
+	}
+
+	err = h.service.DeleteProduct(r.Context(), productID)
+	if err != nil {
+		http.Error(w, "Could not delete product", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
 }
