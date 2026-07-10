@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Aneeshie/ecommerce/internal/identity/domain"
 	"github.com/Aneeshie/ecommerce/internal/identity/token"
 )
 
@@ -54,4 +55,24 @@ func extractBearerToken(r *http.Request) (string, error) {
 	}
 
 	return parts[1], nil
+}
+
+func (a *AuthMiddleware) RequireRole(role domain.Role) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+			claims, ok := ClaimsFromContext(r.Context())
+			if !ok {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			if claims.Role != role {
+				http.Error(w, "Forbidden", http.StatusForbidden)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

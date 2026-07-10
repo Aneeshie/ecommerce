@@ -19,9 +19,9 @@ type Handler struct {
 }
 
 func RegisterRoutes(r chi.Router, h *Handler, auth *middleware.AuthMiddleware) {
-	r.Post("/auth/register", h.Register)
-	r.Post("/auth/login", h.Login)
-	r.Post("/auth/refresh", h.Refresh)
+	r.Post("/api/v1/auth/register", h.Register)
+	r.Post("/api/v1/auth/login", h.Login)
+	r.Post("/api/v1/auth/refresh", h.Refresh)
 
 	r.With(auth.Auth).Get("/auth/me", h.Me)
 }

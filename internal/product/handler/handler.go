@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Aneeshie/ecommerce/internal/identity/domain"
+	"github.com/Aneeshie/ecommerce/internal/middleware"
 	"github.com/Aneeshie/ecommerce/internal/product/dto"
 	"github.com/Aneeshie/ecommerce/internal/product/service"
 	"github.com/go-chi/chi/v5"
@@ -24,12 +26,12 @@ func NewHandler(service *service.Service) *Handler {
 	}
 }
 
-func RegisterRoutes(r chi.Router, h *Handler) {
-	r.Post("/api/v1/products", h.CreateProduct)
+func RegisterRoutes(r chi.Router, h *Handler, auth *middleware.AuthMiddleware) {
+	r.With(auth.Auth, auth.RequireRole(domain.Admin)).Post("/api/v1/products", h.CreateProduct)
 	r.Get("/api/v1/products", h.ListProducts)
 	r.Get("/api/v1/products/{id}", h.GetProduct)
-	r.Put("/api/v1/products/{id}", h.UpdateProduct)
-	r.Delete("/api/v1/products/{id}", h.DeleteProduct)
+	r.With(auth.Auth, auth.RequireRole(domain.Admin)).Put("/api/v1/products/{id}", h.UpdateProduct)
+	r.With(auth.Auth, auth.RequireRole(domain.Admin)).Delete("/api/v1/products/{id}", h.DeleteProduct)
 }
 
 func (h *Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
