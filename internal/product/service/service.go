@@ -125,3 +125,7 @@ func (s *Service) UpdateProduct (ctx context.Context, productID uuid.UUID, produ
 
 	return s.repo.UpdateProduct(ctx, existing)
 }
+
+func (s *Service) DeleteProduct(ctx context.Context, productID uuid.UUID) error {
+	return s.repo.DeleteProduct(ctx, productID)
+}
