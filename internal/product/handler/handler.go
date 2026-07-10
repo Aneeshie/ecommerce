@@ -11,6 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+const LIMIT=20
+
 type Handler struct {
 	service *service.Service
 }
@@ -23,6 +25,22 @@ func NewHandler(service *service.Service) *Handler {
 
 func RegisterRoutes(r chi.Router, h *Handler) {
 	r.Post("/api/v1/products", h.CreateProduct)
+	r.Get("/api/v1/products", h.ListProducts)
+}
+
+func (h *Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
+	resp, err := h.service.ListProducts(r.Context(), LIMIT)
+	if err != nil {
+		http.Error(w, "Could not fetch products", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("failed to enode response: %v", err)
+	}
 }
 
 func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {

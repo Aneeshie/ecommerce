@@ -62,3 +62,24 @@ func (s *Service) CreateProduct(ctx context.Context, req *dto.CreateProductReque
 		ID: product.ID,
 	}, nil
 }
+
+func (s *Service) ListProducts (ctx context.Context, limit int64) ([]*dto.ProductResponse, error){
+	products, err := s.repo.ListProducts(ctx, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	var response []*dto.ProductResponse
+
+	for _, product := range products {
+		response = append(response, &dto.ProductResponse{
+			ID: product.ID,
+			Name: product.Name,
+			Description: product.Description,
+			Price: product.Price.Amount(),
+			Status: string(product.Status),
+		})
+	}
+
+	return response, nil
+}
