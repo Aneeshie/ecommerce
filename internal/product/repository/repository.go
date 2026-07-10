@@ -92,13 +92,38 @@ func (r *Repository) GetProductByID(ctx context.Context, productId uuid.UUID) (*
 		return nil, err
 	}
 
-	p.Price, err  = money.New(amount)
+	p.Price, err = money.New(amount)
 
 	if err != nil {
-			return nil, err
-		}
-
-
+		return nil, err
+	}
 
 	return &p, nil
+}
+
+func (r *Repository) UpdateProduct(ctx context.Context, product *domain.Product) error {
+	query := `
+	UPDATE products
+	SET
+	name = $1,
+	description = $2,
+	price = $3,
+	updated_at = $4
+	WHERE id = $5
+	`
+
+	_, err := r.db.Exec(
+		ctx,
+		query,
+		product.Name,
+		product.Description,
+		product.Price.Amount(),
+		product.UpdatedAt,
+		product.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
