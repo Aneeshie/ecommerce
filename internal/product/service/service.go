@@ -98,3 +98,30 @@ func (s *Service) GetProductById (ctx context.Context, productId uuid.UUID) (*dt
 		Status: string(product.Status),
 	}, nil
 }
+
+func (s *Service) UpdateProduct (ctx context.Context, productID uuid.UUID, product *dto.UpdateProductRequest) error {
+	existing, err := s.repo.GetProductByID(ctx, productID)
+	if err != nil {
+		return err
+
+	}
+	if strings.TrimSpace(product.Name) == "" {
+		return ErrEmptyProductName
+	}
+
+	if strings.TrimSpace(product.Description) == "" {
+		return ErrEmptyProductDescription
+	}
+
+	amount, err  := money.New(product.Price)
+	if err != nil {
+		return err
+	}
+
+	existing.Name = product.Name
+	existing.Description = product.Description
+	existing.Price = amount
+	existing.UpdatedAt=  time.Now()
+
+	return s.repo.UpdateProduct(ctx, existing)
+}
