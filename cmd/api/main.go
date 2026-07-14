@@ -13,8 +13,8 @@ import (
 	"github.com/Aneeshie/ecommerce/internal/identity/token"
 	md "github.com/Aneeshie/ecommerce/internal/middleware"
 	productHandle "github.com/Aneeshie/ecommerce/internal/product/handler"
-	productRepo "github.com/Aneeshie/ecommerce/internal/product/repository"
 	productServices "github.com/Aneeshie/ecommerce/internal/product/service"
+	"github.com/Aneeshie/ecommerce/internal/store"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 )
@@ -32,6 +32,8 @@ func main() {
 
 	defer pool.Close()
 
+	store := store.NewStore(pool)
+
 	identityRepository := repository.NewRepository(pool)
 
 	identityManager := token.NewManager(cfg.JwtSecret)
@@ -47,9 +49,7 @@ func main() {
 
 	handler.RegisterRoutes(r, identityHandler, authMiddleware)
 
-	productRepository := productRepo.NewRepository(pool)
-
-	productService := productServices.NewService(productRepository)
+	productService := productServices.NewService(store)
 
 	productHandler := productHandle.NewHandler(productService)
 

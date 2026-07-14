@@ -1,4 +1,4 @@
-package database
+package store
 
 import (
 	identityRepository "github.com/Aneeshie/ecommerce/internal/identity/repository"
