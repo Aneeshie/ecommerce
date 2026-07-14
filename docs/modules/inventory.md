@@ -85,3 +85,14 @@ The following features are intentionally excluded from Version 1:
 Inventory represents the quantity currently available for sale.
 
 Version 1 stores a single global quantity per product. Future versions may associate inventory with warehouses or fulfillment centers while preserving the same business concept.
+
+# Dependencies
+
+## Depends On
+
+- Product Module
+
+## Used By
+
+- Cart Module
+- Order Module

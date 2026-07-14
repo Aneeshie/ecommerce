@@ -5,18 +5,18 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Aneeshie/ecommerce/internal/common/database"
 	"github.com/Aneeshie/ecommerce/internal/common/money"
 	"github.com/Aneeshie/ecommerce/internal/product/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Repository struct {
-	db *pgxpool.Pool
+	db database.QueryExecutor
 }
 
-func NewRepository(db *pgxpool.Pool) *Repository {
+func NewRepository(db database.QueryExecutor) *Repository {
 	return &Repository{
 		db: db,
 	}
