@@ -8,7 +8,6 @@ import (
 	"github.com/Aneeshie/ecommerce/internal/config"
 	"github.com/Aneeshie/ecommerce/internal/database"
 	"github.com/Aneeshie/ecommerce/internal/identity/handler"
-	"github.com/Aneeshie/ecommerce/internal/identity/repository"
 	"github.com/Aneeshie/ecommerce/internal/identity/service"
 	"github.com/Aneeshie/ecommerce/internal/identity/token"
 	md "github.com/Aneeshie/ecommerce/internal/middleware"
@@ -34,11 +33,9 @@ func main() {
 
 	store := store.NewStore(pool)
 
-	identityRepository := repository.NewRepository(pool)
-
 	identityManager := token.NewManager(cfg.JwtSecret)
 
-	identityService := service.NewService(identityRepository, identityManager)
+	identityService := service.NewService(store, identityManager)
 
 	identityHandler := handler.NewHandler(identityService)
 
