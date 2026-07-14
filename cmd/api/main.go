@@ -53,7 +53,7 @@ func main() {
 
 	productHandler := productHandle.NewHandler(productService)
 
-	productHandle.RegisterRoutes(r, productHandler)
+	productHandle.RegisterRoutes(r, productHandler, authMiddleware)
 
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		log.Fatal(err)
