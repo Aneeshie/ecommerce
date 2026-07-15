@@ -8,6 +8,7 @@ import (
 
 	"github.com/Aneeshie/ecommerce/internal/common/money"
 	"github.com/Aneeshie/ecommerce/internal/product/domain"
+	inventoryDomain "github.com/Aneeshie/ecommerce/internal/inventory/domain"
 	"github.com/Aneeshie/ecommerce/internal/product/dto"
 	"github.com/Aneeshie/ecommerce/internal/store"
 	"github.com/google/uuid"
@@ -53,9 +54,35 @@ func (s *Service) CreateProduct(ctx context.Context, req *dto.CreateProductReque
 		UpdatedAt: time.Now(),
 	}
 
-	err = s.store.Products().CreateProduct(ctx, &product)
+	tx, err := s.store.Begin(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+
+	err = tx.Products().CreateProduct(ctx, &product)
+	if err != nil {
+		return &dto.CreateProductResponse{}, err
+	}
+
+	inventory := &inventoryDomain.Inventory {
+		ProductID: product.ID,
+		Quantity: 0,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	err = tx.Inventory().CreateInventory(ctx, inventory)
+	if err != nil {
+		return &dto.CreateProductResponse{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return &dto.CreateProductResponse{}, err
 	}
 
 	return &dto.CreateProductResponse{

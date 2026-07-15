@@ -1,9 +1,13 @@
 package domain
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Inventory struct {
-	ProductID string
+	ProductID uuid.UUID
 	Quantity  int
 	CreatedAt time.Time
 	UpdatedAt time.Time

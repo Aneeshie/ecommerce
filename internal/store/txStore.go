@@ -1,6 +1,8 @@
 package store
 
 import (
+	"context"
+
 	identityRepository "github.com/Aneeshie/ecommerce/internal/identity/repository"
 	inventoryRepository "github.com/Aneeshie/ecommerce/internal/inventory/repository"
 	productRepository "github.com/Aneeshie/ecommerce/internal/product/repository"
@@ -9,6 +11,14 @@ import (
 
 type TxStore struct {
 	tx pgx.Tx
+}
+
+func (s *TxStore) Rollback(ctx context.Context) error {
+	return s.tx.Rollback(ctx)
+}
+
+func (s *TxStore) Commit(ctx context.Context) error {
+	return s.tx.Commit(ctx)
 }
 
 func (s *TxStore) Products() *productRepository.Repository {

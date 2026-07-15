@@ -1,6 +1,8 @@
 package store
 
 import (
+	"context"
+
 	identityRepository "github.com/Aneeshie/ecommerce/internal/identity/repository"
 	inventoryRepository "github.com/Aneeshie/ecommerce/internal/inventory/repository"
 	productRepository "github.com/Aneeshie/ecommerce/internal/product/repository"
@@ -15,6 +17,17 @@ func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{
 		pool: pool,
 	}
+}
+
+func (s *Store) Begin(ctx context.Context) (*TxStore, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return &TxStore{}, err
+	}
+
+	return &TxStore{
+		tx: tx,
+	}, nil
 }
 
 func (s *Store) Products() *productRepository.Repository {
