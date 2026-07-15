@@ -8,13 +8,12 @@ import (
 	"github.com/Aneeshie/ecommerce/internal/config"
 	"github.com/Aneeshie/ecommerce/internal/database"
 	"github.com/Aneeshie/ecommerce/internal/identity/handler"
-	"github.com/Aneeshie/ecommerce/internal/identity/repository"
 	"github.com/Aneeshie/ecommerce/internal/identity/service"
 	"github.com/Aneeshie/ecommerce/internal/identity/token"
 	md "github.com/Aneeshie/ecommerce/internal/middleware"
 	productHandle "github.com/Aneeshie/ecommerce/internal/product/handler"
-	productRepo "github.com/Aneeshie/ecommerce/internal/product/repository"
 	productServices "github.com/Aneeshie/ecommerce/internal/product/service"
+	"github.com/Aneeshie/ecommerce/internal/store"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/chi/v5"
 )
@@ -32,11 +31,11 @@ func main() {
 
 	defer pool.Close()
 
-	identityRepository := repository.NewRepository(pool)
+	store := store.NewStore(pool)
 
 	identityManager := token.NewManager(cfg.JwtSecret)
 
-	identityService := service.NewService(identityRepository, identityManager)
+	identityService := service.NewService(store, identityManager)
 
 	identityHandler := handler.NewHandler(identityService)
 
@@ -47,9 +46,7 @@ func main() {
 
 	handler.RegisterRoutes(r, identityHandler, authMiddleware)
 
-	productRepository := productRepo.NewRepository(pool)
-
-	productService := productServices.NewService(productRepository)
+	productService := productServices.NewService(store)
 
 	productHandler := productHandle.NewHandler(productService)
 

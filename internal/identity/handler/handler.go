@@ -49,6 +49,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	err = h.service.Register(r.Context(), req)
 
 	if err != nil {
+		log.Printf("error in registering: %v", err)
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}

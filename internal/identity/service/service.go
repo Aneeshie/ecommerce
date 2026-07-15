@@ -9,9 +9,9 @@ import (
 	"github.com/Aneeshie/ecommerce/internal/identity/domain"
 	"github.com/Aneeshie/ecommerce/internal/identity/dto"
 	"github.com/Aneeshie/ecommerce/internal/identity/password"
-	"github.com/Aneeshie/ecommerce/internal/identity/repository"
 	"github.com/Aneeshie/ecommerce/internal/identity/token"
 	"github.com/Aneeshie/ecommerce/internal/identity/validator"
+	"github.com/Aneeshie/ecommerce/internal/store"
 	"github.com/google/uuid"
 )
 
@@ -27,13 +27,13 @@ const (
 )
 
 type Service struct {
-	repo         *repository.Repository
+	store        *store.Store
 	tokenManager *token.Manager
 }
 
-func NewService(repo *repository.Repository, tokenManager *token.Manager) *Service {
+func NewService(store *store.Store, tokenManager *token.Manager) *Service {
 	return &Service{
-		repo:         repo,
+		store:        store,
 		tokenManager: tokenManager,
 	}
 }
@@ -43,7 +43,7 @@ func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
 		return fmt.Errorf("Email cannot be empty")
 	}
 
-	_, err := s.repo.FindByEmail(ctx, req.Email)
+	_, err := s.store.Users().FindByEmail(ctx, req.Email)
 	if err == nil {
 		return ErrEmailAlreadyExists
 	}
@@ -70,7 +70,7 @@ func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
 		UpdatedAt:     time.Now(),
 	}
 
-	err = s.repo.Create(ctx, user)
+	err = s.store.Users().Create(ctx, user)
 
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
 func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error) {
 	now := time.Now()
 	//check if user exists in first place
-	user, err := s.repo.FindByEmail(ctx, req.Email)
+	user, err := s.store.Users().FindByEmail(ctx, req.Email)
 	if err != nil {
 		return dto.LoginResponse{}, ErrInvalidCredentials
 	}
@@ -123,7 +123,7 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 	}
 
 	//call the repo thingy (put it in the database)
-	err = s.repo.CreateRefreshToken(ctx, refreshToken)
+	err = s.store.Users().CreateRefreshToken(ctx, refreshToken)
 	if err != nil {
 		return dto.LoginResponse{}, err
 	}
@@ -140,7 +140,7 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.RefreshResponse, error) {
 	hashedRefreshToken := s.tokenManager.HashRefreshToken(req.RefreshToken)
 
-	refreshToken, err := s.repo.FindRefreshTokenByHash(ctx, hashedRefreshToken)
+	refreshToken, err := s.store.Users().FindRefreshTokenByHash(ctx, hashedRefreshToken)
 
 	if refreshToken.RevokedAt != nil {
 		return dto.RefreshResponse{}, ErrInvalidRefreshToken
@@ -150,7 +150,7 @@ func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.Refr
 		return dto.RefreshResponse{}, ErrInvalidRefreshToken
 	}
 
-	user, err := s.repo.FindByID(ctx, refreshToken.UserID)
+	user, err := s.store.Users().FindByID(ctx, refreshToken.UserID)
 	if err != nil {
 		return dto.RefreshResponse{}, err
 	}
@@ -160,7 +160,7 @@ func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.Refr
 	if err != nil {
 		return dto.RefreshResponse{}, err
 	}
-	//return dto.RefreshReponse
+	//return dto.Refres.store.Users()nse
 	return dto.RefreshResponse{
 		AccessToken: accessToken,
 		ExpiresIn:   int(AccessTokenTTL.Seconds()),
@@ -169,7 +169,7 @@ func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.Refr
 }
 
 func (s *Service) GetCurrentUser(ctx context.Context, userId uuid.UUID) (*dto.MeResponse, error) {
-	user, err := s.repo.FindByID(ctx, userId)
+	user, err := s.store.Users().FindByID(ctx, userId)
 	if err != nil {
 		return &dto.MeResponse{}, err
 	}

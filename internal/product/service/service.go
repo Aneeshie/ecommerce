@@ -8,8 +8,9 @@ import (
 
 	"github.com/Aneeshie/ecommerce/internal/common/money"
 	"github.com/Aneeshie/ecommerce/internal/product/domain"
+	inventoryDomain "github.com/Aneeshie/ecommerce/internal/inventory/domain"
 	"github.com/Aneeshie/ecommerce/internal/product/dto"
-	"github.com/Aneeshie/ecommerce/internal/product/repository"
+	"github.com/Aneeshie/ecommerce/internal/store"
 	"github.com/google/uuid"
 )
 
@@ -19,12 +20,12 @@ var (
 )
 
 type Service struct {
-	repo *repository.Repository
+	store *store.Store
 }
 
-func NewService(repo *repository.Repository) *Service {
+func NewService(store *store.Store) *Service {
 	return &Service{
-		repo: repo,
+		store: store,
 	}
 }
 
@@ -53,9 +54,35 @@ func (s *Service) CreateProduct(ctx context.Context, req *dto.CreateProductReque
 		UpdatedAt: time.Now(),
 	}
 
-	err = s.repo.CreateProduct(ctx, &product)
+	tx, err := s.store.Begin(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	defer func() {
+		_ = tx.Rollback(ctx)
+	}()
+
+
+	err = tx.Products().CreateProduct(ctx, &product)
+	if err != nil {
+		return &dto.CreateProductResponse{}, err
+	}
+
+	inventory := &inventoryDomain.Inventory {
+		ProductID: product.ID,
+		Quantity: 0,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	err = tx.Inventory().CreateInventory(ctx, inventory)
+	if err != nil {
+		return &dto.CreateProductResponse{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return &dto.CreateProductResponse{}, err
 	}
 
 	return &dto.CreateProductResponse{
@@ -64,7 +91,7 @@ func (s *Service) CreateProduct(ctx context.Context, req *dto.CreateProductReque
 }
 
 func (s *Service) ListProducts(ctx context.Context, limit int64) ([]*dto.ProductResponse, error) {
-	products, err := s.repo.ListProducts(ctx, limit)
+	products, err := s.store.Products().ListProducts(ctx, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +112,7 @@ func (s *Service) ListProducts(ctx context.Context, limit int64) ([]*dto.Product
 }
 
 func (s *Service) GetProductById(ctx context.Context, productId uuid.UUID) (*dto.ProductResponse, error) {
-	product, err := s.repo.GetProductByID(ctx, productId)
+	product, err := s.store.Products().GetProductByID(ctx, productId)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +127,7 @@ func (s *Service) GetProductById(ctx context.Context, productId uuid.UUID) (*dto
 }
 
 func (s *Service) UpdateProduct(ctx context.Context, productID uuid.UUID, product *dto.UpdateProductRequest) error {
-	existing, err := s.repo.GetProductByID(ctx, productID)
+	existing, err := s.store.Products().GetProductByID(ctx, productID)
 	if err != nil {
 		return err
 
@@ -123,9 +150,9 @@ func (s *Service) UpdateProduct(ctx context.Context, productID uuid.UUID, produc
 	existing.Price = amount
 	existing.UpdatedAt = time.Now()
 
-	return s.repo.UpdateProduct(ctx, existing)
+	return s.store.Products().UpdateProduct(ctx, existing)
 }
 
 func (s *Service) DeleteProduct(ctx context.Context, productID uuid.UUID) error {
-	return s.repo.DeleteProduct(ctx, productID)
+	return s.store.Products().DeleteProduct(ctx, productID)
 }

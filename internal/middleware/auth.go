@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -68,6 +69,7 @@ func (a *AuthMiddleware) RequireRole(role domain.Role) func(http.Handler) http.H
 			}
 
 			if claims.Role != role {
+				log.Println("Role from context:", role)
 				http.Error(w, "Forbidden", http.StatusForbidden)
 				return
 			}
