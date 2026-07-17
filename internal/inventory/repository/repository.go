@@ -30,16 +30,29 @@ func (r *Repository) CreateInventory(ctx context.Context, inventory *domain.Inve
 
 func (r *Repository) GetInventoryByProductID(ctx context.Context, productID uuid.UUID) (*domain.Inventory, error) {
 
-	var inv *domain.Inventory
+	var inv domain.Inventory
 
-	query := `SELECT (product_id, quantity, created_at, updated_at) FROM inventories WHERE product_id=$1`
+	query := `
+	SELECT
+		product_id,
+		quantity,
+		created_at,
+		updated_at
+	FROM inventories
+	WHERE product_id = $1
+`
 
-	err := r.db.QueryRow(ctx, query, productID).Scan(&inv.ProductID, &inv.Quantity, &inv.CreatedAt, &inv.UpdatedAt)
+	err := r.db.QueryRow(ctx, query, productID).Scan(
+		&inv.ProductID,
+		&inv.Quantity,
+		&inv.CreatedAt,
+		&inv.UpdatedAt,
+	)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return inv, nil
+	return &inv, nil
 
 }
