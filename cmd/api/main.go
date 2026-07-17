@@ -11,6 +11,8 @@ import (
 	"github.com/Aneeshie/ecommerce/internal/identity/service"
 	"github.com/Aneeshie/ecommerce/internal/identity/token"
 	md "github.com/Aneeshie/ecommerce/internal/middleware"
+	orderHandle "github.com/Aneeshie/ecommerce/internal/order/handler"
+	orderServices "github.com/Aneeshie/ecommerce/internal/order/service"
 	productHandle "github.com/Aneeshie/ecommerce/internal/product/handler"
 	productServices "github.com/Aneeshie/ecommerce/internal/product/service"
 	"github.com/Aneeshie/ecommerce/internal/store"
@@ -51,6 +53,12 @@ func main() {
 	productHandler := productHandle.NewHandler(productService)
 
 	productHandle.RegisterRoutes(r, productHandler, authMiddleware)
+
+	orderService := orderServices.NewService(store)
+
+	orderHandler := orderHandle.NewHandler(orderService)
+
+	orderHandle.RegisterRoutes(r, orderHandler, authMiddleware)
 
 	if err := http.ListenAndServe(":8080", r); err != nil {
 		log.Fatal(err)

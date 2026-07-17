@@ -5,6 +5,7 @@ import (
 
 	identityRepository "github.com/Aneeshie/ecommerce/internal/identity/repository"
 	inventoryRepository "github.com/Aneeshie/ecommerce/internal/inventory/repository"
+	orderRepository "github.com/Aneeshie/ecommerce/internal/order/repository"
 	productRepository "github.com/Aneeshie/ecommerce/internal/product/repository"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -40,4 +41,8 @@ func (s *Store) Inventory() *inventoryRepository.Repository {
 
 func (s *Store) Users() *identityRepository.Repository {
 	return identityRepository.NewRepository(s.pool)
+}
+
+func (s *Store) Orders() *orderRepository.Repository {
+	return orderRepository.NewRepository(s.pool)
 }
