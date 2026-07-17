@@ -35,3 +35,26 @@ func (r *Repository) CreateOrder(ctx context.Context, order *domain.Order) error
 
 	return err
 }
+
+func (r *Repository) CreateOrderItems(ctx context.Context, orderItems []*domain.OrderItem) error {
+
+	query := `INSERT INTO order_items (
+    id,
+    order_id,
+    product_id,
+    quantity,
+    price,
+    created_at,
+    updated_at
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7);`
+
+	for _, item := range orderItems {
+		_, err := r.db.Exec(ctx, query, item.ID, item.OrderID, item.ProductID, item.Quantity, item.Price.Amount(), item.CreatedAt, item.UpdatedAt)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
