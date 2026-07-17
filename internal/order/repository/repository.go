@@ -2,9 +2,11 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/Aneeshie/ecommerce/internal/common/database"
 	"github.com/Aneeshie/ecommerce/internal/order/domain"
+	"github.com/google/uuid"
 )
 
 type Repository struct {
@@ -16,6 +18,8 @@ func NewRepository(db database.QueryExecutor) *Repository {
 		db: db,
 	}
 }
+
+var ErrInsufficientInventory error = errors.New("Insufficient inventory")
 
 func (r *Repository) CreateOrder(ctx context.Context, order *domain.Order) error {
 
@@ -54,6 +58,23 @@ VALUES ($1, $2, $3, $4, $5, $6, $7);`
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (r *Repository) DecreaseInventory(ctx context.Context, productID uuid.UUID, quantity int) error {
+	query := `UPDATE inventories SET quantity = quantity - $1 WHERE product_id = $2 AND quantity >= $1`
+
+	result, err := r.db.Exec(ctx, query, quantity, productID)
+	if err != nil {
+		return err
+	}
+
+	rows := result.RowsAffected()
+
+	if rows == 0 {
+		return ErrInsufficientInventory
 	}
 
 	return nil
