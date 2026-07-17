@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/Aneeshie/ecommerce/internal/common/database"
+	"github.com/Aneeshie/ecommerce/internal/common/money"
 	"github.com/Aneeshie/ecommerce/internal/order/domain"
 	"github.com/google/uuid"
 )
@@ -78,4 +79,101 @@ func (r *Repository) DecreaseInventory(ctx context.Context, productID uuid.UUID,
 	}
 
 	return nil
+}
+
+func (r *Repository) GetOrdersByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.Order, error) {
+	query := `
+		SELECT
+			id,
+			user_id,
+			status,
+			total_price,
+			created_at,
+			updated_at
+		FROM orders
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := r.db.Query(ctx, query, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []*domain.Order
+
+	for rows.Next() {
+		order := &domain.Order{}
+
+		var totalPrice int64
+
+		err := rows.Scan(
+			&order.ID,
+			&order.UserID,
+			&order.Status,
+			&totalPrice,
+			&order.CreatedAt,
+			&order.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		order.TotalPrice, err = money.New(totalPrice)
+		if err != nil {
+			return nil, err
+		}
+
+		orders = append(orders, order)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+func (r *Repository) GetOrderByID(
+	ctx context.Context,
+	userID uuid.UUID,
+	orderID uuid.UUID,
+) (*domain.Order, error) {
+
+	query := `
+		SELECT
+			id,
+			user_id,
+			status,
+			total_price,
+			created_at,
+			updated_at
+		FROM orders
+		WHERE id = $1
+		  AND user_id = $2
+	`
+
+	order := &domain.Order{}
+
+	var totalPrice int64
+
+	err := r.db.QueryRow(ctx, query, orderID, userID).Scan(
+		&order.ID,
+		&order.UserID,
+		&order.Status,
+		&totalPrice,
+		&order.CreatedAt,
+		&order.UpdatedAt,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	order.TotalPrice, err = money.New(totalPrice)
+	if err != nil {
+		return nil, err
+	}
+
+	return order, nil
 }

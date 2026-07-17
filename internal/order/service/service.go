@@ -158,3 +158,18 @@ func (s *Service) CreateOrder(ctx context.Context, userID uuid.UUID, req *dto.Cr
 	return tx.Commit(ctx)
 
 }
+
+func (s *Service) GetOrdersByUserID(
+	ctx context.Context,
+	userID uuid.UUID,
+) ([]*domain.Order, error) {
+	return s.store.Orders().GetOrdersByUserID(ctx, userID)
+}
+
+func (s *Service) GetOrderByID(
+	ctx context.Context,
+	userID uuid.UUID,
+	orderID uuid.UUID,
+) (*domain.Order, error) {
+	return s.store.Orders().GetOrderByID(ctx, userID, orderID)
+}
