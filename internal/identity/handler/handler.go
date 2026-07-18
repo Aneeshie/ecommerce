@@ -31,6 +31,19 @@ func NewHandler(s *service.Service) *Handler {
 	}
 }
 
+// Register godoc
+//
+//	@Summary Register a new user
+//	@Description Creates a new customer account
+//	@Tags Authentication
+//	@Accept json
+//	@Produce json
+//	@Param request body dto.RegisterRequest true "Register Request"
+//	@Success 201 {object} dto.RegisterResponse
+//	@Failure 400 {string} string
+//	@Failure 409 {string} string
+//	@Failure 500 {string} string
+//	@Router /api/v1/auth/register [post]
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req dto.RegisterRequest
 
@@ -59,6 +72,19 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// Login godoc
+//
+//	@Summary Login user
+//	@Description Authenticates a user and returns tokens
+//	@Tags Authentication
+//	@Accept json
+//	@Produce json
+//	@Param request body dto.LoginRequest true "Login Request"
+//	@Success 200 {object} map[string]interface{}
+//	@Failure 400 {string} string
+//	@Failure 401 {string} string
+//	@Failure 500 {string} string
+//	@Router /api/v1/auth/login [post]
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req dto.LoginRequest
 
@@ -81,6 +107,19 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
+// Refresh godoc
+//
+//	@Summary Refresh access token
+//	@Description Refreshes the authentication token
+//	@Tags Authentication
+//	@Accept json
+//	@Produce json
+//	@Param request body dto.RefreshRequest true "Refresh Request"
+//	@Success 200 {object} map[string]interface{}
+//	@Failure 400 {string} string
+//	@Failure 401 {string} string
+//	@Failure 500 {string} string
+//	@Router /api/v1/auth/refresh [post]
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var req dto.RefreshRequest
 
@@ -101,6 +140,18 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
+// Me godoc
+//
+//	@Summary Get current user
+//	@Description Returns the profile of the currently authenticated user
+//	@Tags Authentication
+//	@Accept json
+//	@Produce json
+//	@Success 200 {object} map[string]interface{}
+//	@Failure 401 {string} string
+//	@Failure 500 {string} string
+//	@Security ApiKeyAuth
+//	@Router /auth/me [get]
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	claims, ok := middleware.ClaimsFromContext(r.Context())
 	if !ok {

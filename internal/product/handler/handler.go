@@ -34,6 +34,16 @@ func RegisterRoutes(r chi.Router, h *Handler, auth *middleware.AuthMiddleware) {
 	r.With(auth.Auth, auth.RequireRole(domain.Admin)).Delete("/api/v1/products/{id}", h.DeleteProduct)
 }
 
+// ListProducts godoc
+//
+//	@Summary List products
+//	@Description Returns a list of products
+//	@Tags Products
+//	@Accept json
+//	@Produce json
+//	@Success 200 {array} map[string]interface{}
+//	@Failure 500 {string} string
+//	@Router /api/v1/products [get]
 func (h *Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.service.ListProducts(r.Context(), LIMIT)
 	if err != nil {
@@ -44,6 +54,21 @@ func (h *Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
+// CreateProduct godoc
+//
+//	@Summary Create product
+//	@Description Creates a new product (Admin only)
+//	@Tags Products
+//	@Accept json
+//	@Produce json
+//	@Param request body dto.CreateProductRequest true "Create Product Request"
+//	@Success 201 {object} map[string]interface{}
+//	@Failure 400 {string} string
+//	@Failure 401 {string} string
+//	@Failure 403 {string} string
+//	@Failure 500 {string} string
+//	@Security ApiKeyAuth
+//	@Router /api/v1/products [post]
 func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	var req dto.CreateProductRequest
 
@@ -66,6 +91,19 @@ func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, resp)
 }
 
+// GetProduct godoc
+//
+//	@Summary Get product by ID
+//	@Description Returns a specific product by its ID
+//	@Tags Products
+//	@Accept json
+//	@Produce json
+//	@Param id path string true "Product ID"
+//	@Success 200 {object} map[string]interface{}
+//	@Failure 400 {string} string
+//	@Failure 404 {string} string
+//	@Failure 500 {string} string
+//	@Router /api/v1/products/{id} [get]
 func (h *Handler) GetProduct(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 
@@ -84,6 +122,23 @@ func (h *Handler) GetProduct(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
+// UpdateProduct godoc
+//
+//	@Summary Update product
+//	@Description Updates a specific product (Admin only)
+//	@Tags Products
+//	@Accept json
+//	@Produce json
+//	@Param id path string true "Product ID"
+//	@Param request body dto.UpdateProductRequest true "Update Product Request"
+//	@Success 200 {object} map[string]interface{}
+//	@Failure 400 {string} string
+//	@Failure 401 {string} string
+//	@Failure 403 {string} string
+//	@Failure 404 {string} string
+//	@Failure 500 {string} string
+//	@Security ApiKeyAuth
+//	@Router /api/v1/products/{id} [put]
 func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	//get the product id from param
 	id := chi.URLParam(r, "id")
@@ -120,6 +175,22 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
+// DeleteProduct godoc
+//
+//	@Summary Delete product
+//	@Description Deletes a specific product (Admin only)
+//	@Tags Products
+//	@Accept json
+//	@Produce json
+//	@Param id path string true "Product ID"
+//	@Success 204 {string} string "Product successfully deleted"
+//	@Failure 400 {string} string
+//	@Failure 401 {string} string
+//	@Failure 403 {string} string
+//	@Failure 404 {string} string
+//	@Failure 500 {string} string
+//	@Security ApiKeyAuth
+//	@Router /api/v1/products/{id} [delete]
 func (h *Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 

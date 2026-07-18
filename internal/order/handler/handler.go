@@ -29,6 +29,20 @@ func RegisterRoutes(r chi.Router, h *Handler, auth *middleware.AuthMiddleware) {
 	r.Get("/api/v1/orders/{orderID}", h.GetOrderByID)
 }
 
+// CreateOrder godoc
+//
+//	@Summary Create order
+//	@Description Creates a new order for the authenticated user
+//	@Tags Orders
+//	@Accept json
+//	@Produce json
+//	@Param request body dto.CreateOrderRequest true "Create Order Request"
+//	@Success 201 {string} string "order created successfully"
+//	@Failure 400 {string} string
+//	@Failure 401 {string} string
+//	@Failure 500 {string} string
+//	@Security ApiKeyAuth
+//	@Router /api/v1/orders [post]
 func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	var req dto.CreateOrderRequest
 
@@ -60,6 +74,18 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// GetOrders godoc
+//
+//	@Summary Get user orders
+//	@Description Returns a list of orders for the authenticated user
+//	@Tags Orders
+//	@Accept json
+//	@Produce json
+//	@Success 200 {array} map[string]interface{}
+//	@Failure 401 {string} string
+//	@Failure 500 {string} string
+//	@Security ApiKeyAuth
+//	@Router /api/v1/orders [get]
 func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	claims, ok := middleware.ClaimsFromContext(r.Context())
 	if !ok {
@@ -85,6 +111,21 @@ func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, orders)
 }
 
+// GetOrderByID godoc
+//
+//	@Summary Get order by ID
+//	@Description Returns a specific order by its ID
+//	@Tags Orders
+//	@Accept json
+//	@Produce json
+//	@Param orderID path string true "Order ID"
+//	@Success 200 {object} map[string]interface{}
+//	@Failure 400 {string} string
+//	@Failure 401 {string} string
+//	@Failure 404 {string} string
+//	@Failure 500 {string} string
+//	@Security ApiKeyAuth
+//	@Router /api/v1/orders/{orderID} [get]
 func (h *Handler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
 	claims, ok := middleware.ClaimsFromContext(r.Context())
 	if !ok {
