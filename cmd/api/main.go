@@ -1,9 +1,16 @@
+// @title Ecommerce API
+// @version 1.0
+// @description A simple ecommerce backend written in Go.
+// @BasePath /api/v1
 package main
 
 import (
 	"context"
 	"log"
 	"net/http"
+
+	_ "github.com/Aneeshie/ecommerce/docs"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/Aneeshie/ecommerce/internal/config"
 	"github.com/Aneeshie/ecommerce/internal/database"
@@ -45,6 +52,10 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
+
+	r.Get("/swagger/*", httpSwagger.Handler(
+		httpSwagger.URL("/swagger/doc.json"),
+	))
 
 	handler.RegisterRoutes(r, identityHandler, authMiddleware)
 
