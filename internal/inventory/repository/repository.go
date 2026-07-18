@@ -2,10 +2,13 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/Aneeshie/ecommerce/internal/common/database"
+	"github.com/Aneeshie/ecommerce/internal/inventory"
 	"github.com/Aneeshie/ecommerce/internal/inventory/domain"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type Repository struct {
@@ -50,7 +53,9 @@ func (r *Repository) GetInventoryByProductID(ctx context.Context, productID uuid
 	)
 
 	if err != nil {
-		return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, inventory.ErrNoProductFound
+		}
 	}
 
 	return &inv, nil

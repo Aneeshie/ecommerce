@@ -2,11 +2,10 @@ package handler
 
 import (
 	"encoding/json"
-	"errors"
-	"log"
 	"net/http"
 	"strings"
 
+	"github.com/Aneeshie/ecommerce/internal/httpx"
 	"github.com/Aneeshie/ecommerce/internal/identity/dto"
 	"github.com/Aneeshie/ecommerce/internal/identity/service"
 	"github.com/Aneeshie/ecommerce/internal/middleware"
@@ -35,38 +34,29 @@ func NewHandler(s *service.Service) *Handler {
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req dto.RegisterRequest
 
+	defer r.Body.Close()
+
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		http.Error(w, "invalid request payload", http.StatusBadRequest)
 		return
 	}
-
-	defer r.Body.Close()
 
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	req.Name = strings.TrimSpace(req.Name)
 
 	err = h.service.Register(r.Context(), req)
-
 	if err != nil {
-		log.Printf("error in registering: %v", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
-
-	if errors.Is(err, service.ErrEmailAlreadyExists) {
-		http.Error(w, "Email already exists", http.StatusConflict)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-
-	w.WriteHeader(http.StatusCreated)
 
 	resp := dto.RegisterResponse{
 		Message: "User registered successfully",
 	}
-	json.NewEncoder(w).Encode(resp)
+
+	httpx.WriteJSON(w, http.StatusCreated, resp)
+
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +65,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		http.Error(w, "invalid request payload", http.StatusBadRequest)
 		return
 	}
 
@@ -83,22 +73,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.service.Login(r.Context(), req)
 
-	if errors.Is(err, service.ErrInvalidCredentials) {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-		return
-	}
-
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("failed to encode login response: %v", err)
-	}
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
@@ -107,28 +87,18 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request payload", http.StatusBadRequest)
+		http.Error(w, "invalid request payload", http.StatusBadRequest)
 		return
 	}
 
 	resp, err := h.service.Refresh(r.Context(), req)
 
-	if errors.Is(err, service.ErrInvalidRefreshToken) {
-		http.Error(w, "Invalid refresh token", http.StatusUnauthorized)
-		return
-	}
-
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("failed to encode refresh response: %v", err)
-	}
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
@@ -140,21 +110,15 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := uuid.Parse(claims.Subject)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
 	user, err := h.service.GetCurrentUser(r.Context(), userID)
 	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(user); err != nil {
-		log.Printf("failed to encode refresh response: %v", err)
-	}
-
+	httpx.WriteJSON(w, http.StatusOK, user)
 }

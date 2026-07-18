@@ -3,9 +3,9 @@ package service
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
+	"github.com/Aneeshie/ecommerce/internal/identity"
 	"github.com/Aneeshie/ecommerce/internal/identity/domain"
 	"github.com/Aneeshie/ecommerce/internal/identity/dto"
 	"github.com/Aneeshie/ecommerce/internal/identity/password"
@@ -13,12 +13,6 @@ import (
 	"github.com/Aneeshie/ecommerce/internal/identity/validator"
 	"github.com/Aneeshie/ecommerce/internal/store"
 	"github.com/google/uuid"
-)
-
-var (
-	ErrEmailAlreadyExists  = errors.New("email already exists")
-	ErrInvalidCredentials  = errors.New("invalid credentials")
-	ErrInvalidRefreshToken = errors.New("Invalid Refresh Token")
 )
 
 const (
@@ -40,12 +34,16 @@ func NewService(store *store.Store, tokenManager *token.Manager) *Service {
 
 func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
 	if req.Email == "" {
-		return fmt.Errorf("Email cannot be empty")
+		return identity.ErrEmailRequired
 	}
 
 	_, err := s.store.Users().FindByEmail(ctx, req.Email)
 	if err == nil {
-		return ErrEmailAlreadyExists
+		return identity.ErrEmailAlreadyExists
+	}
+
+	if !errors.Is(err, identity.ErrUserNotFound) {
+		return err
 	}
 
 	err = validator.ValidatePassword(req.Password)
@@ -84,14 +82,17 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 	//check if user exists in first place
 	user, err := s.store.Users().FindByEmail(ctx, req.Email)
 	if err != nil {
-		return dto.LoginResponse{}, ErrInvalidCredentials
+		if errors.Is(err, identity.ErrUserNotFound) {
+			return dto.LoginResponse{}, identity.ErrInvalidCredentials
+		}
+		return dto.LoginResponse{}, err
 	}
 
 	// check if the password entered is correct
 	isValid := password.CompareHash(req.Password, user.PasswordHash)
 
 	if !isValid {
-		return dto.LoginResponse{}, ErrInvalidCredentials
+		return dto.LoginResponse{}, identity.ErrInvalidCredentials
 	}
 
 	// generate access token
@@ -105,7 +106,6 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 	// generate refresh token
 	rawRefreshToken, err := s.tokenManager.GenerateRefreshToken()
 	if err != nil {
-
 		return dto.LoginResponse{}, err
 	}
 
@@ -127,6 +127,10 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 	if err != nil {
 		return dto.LoginResponse{}, err
 	}
+
+	if refreshToken.RevokedAt != nil {
+		return dto.LoginResponse{}, identity.ErrInvalidRefreshToken
+	}
 	//return loginResponse
 
 	return dto.LoginResponse{
@@ -143,11 +147,11 @@ func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.Refr
 	refreshToken, err := s.store.Users().FindRefreshTokenByHash(ctx, hashedRefreshToken)
 
 	if refreshToken.RevokedAt != nil {
-		return dto.RefreshResponse{}, ErrInvalidRefreshToken
+		return dto.RefreshResponse{}, identity.ErrInvalidRefreshToken
 	}
 
 	if time.Now().After(refreshToken.ExpiresAt) {
-		return dto.RefreshResponse{}, ErrInvalidRefreshToken
+		return dto.RefreshResponse{}, identity.ErrInvalidRefreshToken
 	}
 
 	user, err := s.store.Users().FindByID(ctx, refreshToken.UserID)

@@ -3,10 +3,12 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/Aneeshie/ecommerce/internal/common/database"
 	"github.com/Aneeshie/ecommerce/internal/common/money"
+	"github.com/Aneeshie/ecommerce/internal/product"
 	"github.com/Aneeshie/ecommerce/internal/product/domain"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -87,10 +89,10 @@ func (r *Repository) GetProductByID(ctx context.Context, productId uuid.UUID) (*
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, pgx.ErrNoRows
+			return nil, product.ErrProductNotFound
 		}
 
-		return nil, err
+		return nil, fmt.Errorf("get product by id: %w", err)
 	}
 
 	p.Price, err = money.New(amount)
@@ -102,7 +104,7 @@ func (r *Repository) GetProductByID(ctx context.Context, productId uuid.UUID) (*
 	return &p, nil
 }
 
-func (r *Repository) UpdateProduct(ctx context.Context, product *domain.Product) error {
+func (r *Repository) UpdateProduct(ctx context.Context, prod *domain.Product) error {
 	query := `
 	UPDATE products
 	SET
@@ -113,17 +115,21 @@ func (r *Repository) UpdateProduct(ctx context.Context, product *domain.Product)
 	WHERE id = $5
 	`
 
-	_, err := r.db.Exec(
+	result, err := r.db.Exec(
 		ctx,
 		query,
-		product.Name,
-		product.Description,
-		product.Price.Amount(),
-		product.UpdatedAt,
-		product.ID,
+		prod.Name,
+		prod.Description,
+		prod.Price.Amount(),
+		prod.UpdatedAt,
+		prod.ID,
 	)
 	if err != nil {
 		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return product.ErrProductNotFound
 	}
 
 	return nil
@@ -133,9 +139,13 @@ func (r *Repository) DeleteProduct(ctx context.Context, productID uuid.UUID) err
 
 	query := `UPDATE products SET status='ARCHIVED', updated_at = $1 WHERE id=$2`
 
-	_, err := r.db.Exec(ctx, query, time.Now(), productID)
+	result, err := r.db.Exec(ctx, query, time.Now(), productID)
 	if err != nil {
 		return err
+	}
+
+	if result.RowsAffected() == 0 {
+		return product.ErrProductNotFound
 	}
 
 	return nil

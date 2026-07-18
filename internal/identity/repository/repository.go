@@ -2,11 +2,15 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Aneeshie/ecommerce/internal/common/database"
+	"github.com/Aneeshie/ecommerce/internal/identity"
 	"github.com/Aneeshie/ecommerce/internal/identity/domain"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
 type Repository struct {
@@ -25,7 +29,12 @@ func (r *Repository) Create(ctx context.Context, user domain.User) error {
 	_, err := r.db.Exec(ctx, query, user.ID, user.Name, user.Email, user.PasswordHash, user.Role, user.EmailVerified, user.CreatedAt, user.UpdatedAt)
 
 	if err != nil {
-		return fmt.Errorf("Create user: %w", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" {
+				return identity.ErrEmailAlreadyExists
+			}
+		}
 	}
 
 	return nil
@@ -61,6 +70,9 @@ func (r *Repository) FindByEmail(ctx context.Context, email string) (domain.User
 	)
 
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.User{}, identity.ErrUserNotFound
+		}
 		return domain.User{}, fmt.Errorf("find user by email: %w", err)
 	}
 
@@ -152,7 +164,10 @@ func (r *Repository) FindByID(ctx context.Context, id uuid.UUID) (domain.User, e
 	)
 
 	if err != nil {
-		return domain.User{}, fmt.Errorf("find user by id: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.User{}, identity.ErrUserNotFound
+		}
+		return domain.User{}, fmt.Errorf("find by user id: %w", err)
 	}
 
 	return user, nil
