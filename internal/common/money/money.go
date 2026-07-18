@@ -34,18 +34,31 @@ func (m Money) Add(other Money) (Money, error) {
 	}
 
 	return Money{
-		paise: m.paise + other.paise,
+		paise: sum,
 	}, nil
 }
 
-func (m Money) Subtract(other Money) Money {
+func (m Money) Subtract(other Money) (Money, error) {
+	if other.paise > m.paise {
+		return Money{}, ErrNegativeAmount
+	}
 	return Money{
 		paise: m.paise - other.paise,
-	}
+	}, nil
 }
 
-func (m Money) Multiply(quantity int) Money {
-	return Money{
-		paise: m.paise * int64(quantity),
+func (m Money) Multiply(quantity int) (Money, error) {
+	product := m.paise * int64(quantity)
+
+	if quantity < 0 {
+		return Money{}, ErrNegativeAmount
 	}
+
+	if quantity != 0 && product/int64(quantity) != m.paise {
+		return Money{}, ErrOverflow
+	}
+
+	return Money{
+		paise: product,
+	}, nil
 }

@@ -82,8 +82,11 @@ func (s *Service) CreateOrder(ctx context.Context, userID uuid.UUID, req *dto.Cr
 	for _, item := range req.Items {
 		product := products[item.ProductID]
 
-		subTotal := product.Price.Multiply(item.Quantity)
 		var err error
+		subTotal, err := product.Price.Multiply(item.Quantity)
+		if err != nil {
+			return err
+		}
 		total, err = total.Add(subTotal)
 		if err != nil {
 			return err
