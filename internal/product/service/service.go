@@ -2,21 +2,16 @@ package service
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
 	"github.com/Aneeshie/ecommerce/internal/common/money"
-	"github.com/Aneeshie/ecommerce/internal/product/domain"
 	inventoryDomain "github.com/Aneeshie/ecommerce/internal/inventory/domain"
+	"github.com/Aneeshie/ecommerce/internal/product"
+	"github.com/Aneeshie/ecommerce/internal/product/domain"
 	"github.com/Aneeshie/ecommerce/internal/product/dto"
 	"github.com/Aneeshie/ecommerce/internal/store"
 	"github.com/google/uuid"
-)
-
-var (
-	ErrEmptyProductName        = errors.New("Product name cannot be empty")
-	ErrEmptyProductDescription = errors.New("Product description cannot be empty")
 )
 
 type Service struct {
@@ -36,11 +31,11 @@ func (s *Service) CreateProduct(ctx context.Context, req *dto.CreateProductReque
 	}
 
 	if strings.TrimSpace(req.Name) == "" {
-		return nil, ErrEmptyProductName
+		return nil, product.ErrEmptyProductName
 	}
 
 	if strings.TrimSpace(req.Description) == "" {
-		return nil, ErrEmptyProductDescription
+		return nil, product.ErrEmptyProductDescription
 	}
 
 	product := domain.Product{
@@ -63,15 +58,14 @@ func (s *Service) CreateProduct(ctx context.Context, req *dto.CreateProductReque
 		_ = tx.Rollback(ctx)
 	}()
 
-
 	err = tx.Products().CreateProduct(ctx, &product)
 	if err != nil {
 		return &dto.CreateProductResponse{}, err
 	}
 
-	inventory := &inventoryDomain.Inventory {
+	inventory := &inventoryDomain.Inventory{
 		ProductID: product.ID,
-		Quantity: 0,
+		Quantity:  0,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -126,27 +120,27 @@ func (s *Service) GetProductById(ctx context.Context, productId uuid.UUID) (*dto
 	}, nil
 }
 
-func (s *Service) UpdateProduct(ctx context.Context, productID uuid.UUID, product *dto.UpdateProductRequest) error {
+func (s *Service) UpdateProduct(ctx context.Context, productID uuid.UUID, prod *dto.UpdateProductRequest) error {
 	existing, err := s.store.Products().GetProductByID(ctx, productID)
 	if err != nil {
 		return err
 
 	}
-	if strings.TrimSpace(product.Name) == "" {
-		return ErrEmptyProductName
+	if strings.TrimSpace(prod.Name) == "" {
+		return product.ErrEmptyProductName
 	}
 
-	if strings.TrimSpace(product.Description) == "" {
-		return ErrEmptyProductDescription
+	if strings.TrimSpace(prod.Description) == "" {
+		return product.ErrEmptyProductDescription
 	}
 
-	amount, err := money.New(product.Price)
+	amount, err := money.New(prod.Price)
 	if err != nil {
 		return err
 	}
 
-	existing.Name = product.Name
-	existing.Description = product.Description
+	existing.Name = prod.Name
+	existing.Description = prod.Description
 	existing.Price = amount
 	existing.UpdatedAt = time.Now()
 

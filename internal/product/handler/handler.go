@@ -2,10 +2,10 @@ package handler
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strings"
 
+	"github.com/Aneeshie/ecommerce/internal/httpx"
 	"github.com/Aneeshie/ecommerce/internal/identity/domain"
 	"github.com/Aneeshie/ecommerce/internal/middleware"
 	"github.com/Aneeshie/ecommerce/internal/product/dto"
@@ -37,43 +37,33 @@ func RegisterRoutes(r chi.Router, h *Handler, auth *middleware.AuthMiddleware) {
 func (h *Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	resp, err := h.service.ListProducts(r.Context(), LIMIT)
 	if err != nil {
-		http.Error(w, "Could not fetch products", http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("failed to enode response: %v", err)
-	}
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	var req dto.CreateProductRequest
+
+	defer r.Body.Close()
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
 
-	defer r.Body.Close()
-
 	req.Name = strings.TrimSpace(req.Name)
 	req.Description = strings.TrimSpace(req.Description)
 
 	resp, err := h.service.CreateProduct(r.Context(), &req)
 	if err != nil {
-		http.Error(w, "Internal server Error", http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("failed to enode response: %v", err)
-	}
+	httpx.WriteJSON(w, http.StatusCreated, resp)
 }
 
 func (h *Handler) GetProduct(w http.ResponseWriter, r *http.Request) {
@@ -87,21 +77,18 @@ func (h *Handler) GetProduct(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := h.service.GetProductById(r.Context(), productID)
 	if err != nil {
-		http.Error(w, "Failed to get the product", http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("failed to enode response: %v", err)
-	}
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	//get the product id from param
 	id := chi.URLParam(r, "id")
+
+	defer r.Body.Close()
 
 	productID, err := uuid.Parse(id)
 	if err != nil {
@@ -120,22 +107,17 @@ func (h *Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	err = h.service.UpdateProduct(r.Context(), productID, &req)
 
 	if err != nil {
-		http.Error(w, "Failed to update the product", http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
 
 	resp, err := h.service.GetProductById(r.Context(), productID)
 	if err != nil {
-		http.Error(w, "Failed to get the product", http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-
-	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		log.Printf("failed to enode response: %v", err)
-	}
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 func (h *Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
@@ -149,11 +131,9 @@ func (h *Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 
 	err = h.service.DeleteProduct(r.Context(), productID)
 	if err != nil {
-		http.Error(w, "Could not delete product", http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
+	httpx.WriteJSON(w, http.StatusNoContent, "Product successfully deleted")
 }
