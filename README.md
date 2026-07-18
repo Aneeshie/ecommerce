@@ -15,6 +15,7 @@ The project is being developed module-by-module, following industry conventions 
 - JWT Authentication
 - Docker
 - UUID
+- Swagger (API Documentation)
 
 ---
 
@@ -57,9 +58,15 @@ cmd/
 internal/
 ├── common/
 │   └── money/
+├── config/
+├── database/
+├── httpx/
 ├── identity/
+├── inventory/
 ├── middleware/
-└── product/
+├── order/
+├── product/
+└── store/
 
 migrations/
 ```
@@ -85,6 +92,12 @@ migrations/
 - Update Product
 - Archive Product (Soft Delete)
 
+### Order
+
+- Create Order
+- List User Orders
+- Get Order by ID
+
 ---
 
 ## API
@@ -107,6 +120,14 @@ migrations/
 | GET | `/api/v1/products/{id}` | Public |
 | PUT | `/api/v1/products/{id}` | Admin |
 | DELETE | `/api/v1/products/{id}` | Admin |
+
+### Orders
+
+| Method | Endpoint | Access |
+|---------|----------|--------|
+| POST | `/api/v1/orders` | Auth |
+| GET | `/api/v1/orders` | Auth |
+| GET | `/api/v1/orders/{orderID}`| Auth |
 
 ---
 
@@ -166,7 +187,7 @@ go run cmd/api/main.go
 - [x] Product Module
 - [ ] Inventory Module
 - [ ] Shopping Cart
-- [ ] Orders
+- [x] Orders
 - [ ] Payments
 - [ ] Admin Dashboard
 - [ ] Frontend
