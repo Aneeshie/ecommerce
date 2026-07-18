@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/Aneeshie/ecommerce/internal/common/money"
 	inventoryDomain "github.com/Aneeshie/ecommerce/internal/inventory/domain"
+	"github.com/Aneeshie/ecommerce/internal/order"
 	"github.com/Aneeshie/ecommerce/internal/order/domain"
 	"github.com/Aneeshie/ecommerce/internal/order/dto"
 	productDomain "github.com/Aneeshie/ecommerce/internal/product/domain"
@@ -14,13 +14,7 @@ import (
 	"github.com/google/uuid"
 )
 
-var (
-	ErrEmptyOrder            = errors.New("The order is empty")
-	ErrInvalidQuantity       = errors.New("One of the items has invalid quantity.")
-	ErrDuplicateProduct      = errors.New("There are duplicate products.")
-	ErrInsufficientInventory = errors.New("Insufficient quantity")
-	ErrUnauthorized          = errors.New("unauthorized user")
-)
+var ()
 
 type Service struct {
 	store *store.Store
@@ -35,17 +29,17 @@ func NewService(store *store.Store) *Service {
 func (s *Service) CreateOrder(ctx context.Context, userID uuid.UUID, req *dto.CreateOrderRequest) error {
 	// validate the request
 	if len(req.Items) == 0 {
-		return ErrEmptyOrder
+		return order.ErrEmptyOrder
 	}
 	seen := make(map[uuid.UUID]struct{})
 
 	for _, item := range req.Items {
 		if item.Quantity <= 0 {
-			return ErrInvalidQuantity
+			return order.ErrInvalidQuantity
 		}
 
 		if _, exists := seen[item.ProductID]; exists {
-			return ErrDuplicateProduct
+			return order.ErrDuplicateProduct
 		}
 
 		seen[item.ProductID] = struct{}{}
@@ -75,7 +69,7 @@ func (s *Service) CreateOrder(ctx context.Context, userID uuid.UUID, req *dto.Cr
 		}
 
 		if inventory.Quantity < item.Quantity {
-			return ErrInsufficientInventory
+			return order.ErrInsufficientInventory
 		}
 
 		inventories[item.ProductID] = inventory

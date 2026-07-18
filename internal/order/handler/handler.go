@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Aneeshie/ecommerce/internal/httpx"
 	"github.com/Aneeshie/ecommerce/internal/identity/domain"
 	"github.com/Aneeshie/ecommerce/internal/middleware"
 	"github.com/Aneeshie/ecommerce/internal/order/dto"
@@ -39,24 +40,23 @@ func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 
 	claims, ok := middleware.ClaimsFromContext(r.Context())
 	if !ok {
-		http.Error(w, "not able to get the jwt claims", http.StatusUnauthorized)
+		httpx.WriteError(w, err)
 		return
 	}
 
 	userID, err := uuid.Parse(claims.Subject)
 	if err != nil {
-		http.Error(w, "not able to parse the userID", http.StatusUnauthorized)
+		httpx.WriteError(w, err)
 		return
 	}
 
 	err = h.service.CreateOrder(r.Context(), userID, &req)
 	if err != nil {
-		http.Error(w, "Could not place the order", http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	httpx.WriteJSON(w, http.StatusCreated, "order created successfully")
 
 }
 
@@ -69,7 +69,7 @@ func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := uuid.Parse(claims.Subject)
 	if err != nil {
-		http.Error(w, "invalid user id", http.StatusUnauthorized)
+		httpx.WriteError(w, err)
 		return
 	}
 
@@ -78,17 +78,11 @@ func (h *Handler) GetOrders(w http.ResponseWriter, r *http.Request) {
 		userID,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(orders); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	httpx.WriteJSON(w, http.StatusOK, orders)
 }
 
 func (h *Handler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
@@ -116,15 +110,9 @@ func (h *Handler) GetOrderByID(w http.ResponseWriter, r *http.Request) {
 		orderID,
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.WriteError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(order); err != nil {
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
+	httpx.WriteJSON(w, http.StatusOK, order)
 }

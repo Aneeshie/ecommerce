@@ -3,11 +3,14 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/Aneeshie/ecommerce/internal/common/database"
 	"github.com/Aneeshie/ecommerce/internal/common/money"
+	"github.com/Aneeshie/ecommerce/internal/order"
 	"github.com/Aneeshie/ecommerce/internal/order/domain"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 )
 
 type Repository struct {
@@ -19,8 +22,6 @@ func NewRepository(db database.QueryExecutor) *Repository {
 		db: db,
 	}
 }
-
-var ErrInsufficientInventory error = errors.New("Insufficient inventory")
 
 func (r *Repository) CreateOrder(ctx context.Context, order *domain.Order) error {
 
@@ -38,7 +39,11 @@ func (r *Repository) CreateOrder(ctx context.Context, order *domain.Order) error
 
 	_, err := r.db.Exec(ctx, query, order.ID, order.UserID, order.Status, order.TotalPrice.Amount(), order.CreatedAt, order.UpdatedAt)
 
-	return err
+	if err != nil {
+		return fmt.Errorf("create order: %w", err)
+	}
+
+	return nil
 }
 
 func (r *Repository) CreateOrderItems(ctx context.Context, orderItems []*domain.OrderItem) error {
@@ -57,7 +62,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7);`
 	for _, item := range orderItems {
 		_, err := r.db.Exec(ctx, query, item.ID, item.OrderID, item.ProductID, item.Quantity, item.Price.Amount(), item.CreatedAt, item.UpdatedAt)
 		if err != nil {
-			return err
+			return fmt.Errorf("create order item: %w", err)
 		}
 	}
 
@@ -75,7 +80,7 @@ func (r *Repository) DecreaseInventory(ctx context.Context, productID uuid.UUID,
 	rows := result.RowsAffected()
 
 	if rows == 0 {
-		return ErrInsufficientInventory
+		return order.ErrInsufficientInventory
 	}
 
 	return nil
@@ -154,26 +159,28 @@ func (r *Repository) GetOrderByID(
 		  AND user_id = $2
 	`
 
-	order := &domain.Order{}
+	ord := &domain.Order{}
 
 	var totalPrice int64
 
 	err := r.db.QueryRow(ctx, query, orderID, userID).Scan(
-		&order.ID,
-		&order.UserID,
-		&order.Status,
+		&ord.ID,
+		&ord.UserID,
+		&ord.Status,
 		&totalPrice,
-		&order.CreatedAt,
-		&order.UpdatedAt,
+		&ord.CreatedAt,
+		&ord.UpdatedAt,
 	)
 	if err != nil {
-		return nil, err
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, order.ErrOrderNotFound
+		}
 	}
 
-	order.TotalPrice, err = money.New(totalPrice)
+	ord.TotalPrice, err = money.New(totalPrice)
 	if err != nil {
 		return nil, err
 	}
 
-	return order, nil
+	return ord, nil
 }
