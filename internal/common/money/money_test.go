@@ -34,56 +34,93 @@ func TestNew(t *testing.T) {
 }
 func TestAdd(t *testing.T) {
 	tests := []struct {
-		Name     string
-		Left     int64
-		Right    int64
-		Expected int64
+		Name          string
+		Left          int64
+		Right         int64
+		Expected      int64
+		ExpectedError error
 	}{
-		{
-			Name:     "Positive + Positive",
-			Left:     100,
-			Right:    100,
-			Expected: 200,
-		},
-		{
-			Name:     "Positive + Zero",
-			Left:     100,
-			Right:    0,
-			Expected: 100,
-		},
-		{
-			Name:     "Zero + Zero",
-			Left:     0,
-			Right:    0,
-			Expected: 0,
-		},
+		{Name: "Positive + Positive", Left: 100, Right: 100, Expected: 200, ExpectedError: nil},
+		{Name: "Positive + Zero", Left: 100, Right: 0, Expected: 100, ExpectedError: nil},
+		{Name: "Zero + Zero", Left: 0, Right: 0, Expected: 0, ExpectedError: nil},
+		{Name: "Overflow", Left: math.MaxInt64, Right: 1, Expected: 0, ExpectedError: ErrOverflow},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
-			left, err := New(tt.Left)
-			if err != nil {
-				t.Fatalf("failed to create left money: %v", err)
-			}
+			left, _ := New(tt.Left)
+			right, _ := New(tt.Right)
 
-			right, err := New(tt.Right)
-			if err != nil {
-				t.Fatalf("failed to create right money: %v", err)
+			result, err := left.Add(right)
+			if err != tt.ExpectedError {
+				t.Fatalf("expected error %v, got %v", tt.ExpectedError, err)
 			}
-
-			result := left.Add(right)
 
 			if result.Amount() != tt.Expected {
-				t.Errorf("expected %d, got %d", tt.Expected, result.Amount())
+				t.Errorf("expected amount %d, got %d", tt.Expected, result.Amount())
 			}
 		})
 	}
 }
-func TestAddOverflow(t *testing.T) {
-	left, _ := New(math.MaxInt64)
-	right, _ := New(1)
 
-	result := left.Add(right)
+func TestSubtract(t *testing.T) {
+	tests := []struct {
+		Name          string
+		Left          int64
+		Right         int64
+		Expected      int64
+		ExpectedError error
+	}{
+		{Name: "Positive - Positive", Left: 200, Right: 100, Expected: 100, ExpectedError: nil},
+		{Name: "Positive - Zero", Left: 100, Right: 0, Expected: 100, ExpectedError: nil},
+		{Name: "Zero - Zero", Left: 0, Right: 0, Expected: 0, ExpectedError: nil},
+		{Name: "Negative Result", Left: 100, Right: 200, Expected: 0, ExpectedError: ErrNegativeAmount},
+	}
 
-	t.Logf("result = %d", result.Amount())
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			left, _ := New(tt.Left)
+			right, _ := New(tt.Right)
+
+			result, err := left.Subtract(right)
+			if err != tt.ExpectedError {
+				t.Fatalf("expected error %v, got %v", tt.ExpectedError, err)
+			}
+
+			if result.Amount() != tt.Expected {
+				t.Errorf("expected amount %d, got %d", tt.Expected, result.Amount())
+			}
+		})
+	}
+}
+
+func TestMultiply(t *testing.T) {
+	tests := []struct {
+		Name          string
+		Amount        int64
+		Multiplier    int
+		Expected      int64
+		ExpectedError error
+	}{
+		{Name: "Positive * Positive", Amount: 100, Multiplier: 2, Expected: 200, ExpectedError: nil},
+		{Name: "Positive * Zero", Amount: 100, Multiplier: 0, Expected: 0, ExpectedError: nil},
+		{Name: "Zero * Positive", Amount: 0, Multiplier: 5, Expected: 0, ExpectedError: nil},
+		{Name: "Negative Multiplier", Amount: 100, Multiplier: -1, Expected: 0, ExpectedError: ErrNegativeAmount},
+		{Name: "Overflow", Amount: math.MaxInt64, Multiplier: 2, Expected: 0, ExpectedError: ErrOverflow},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.Name, func(t *testing.T) {
+			money, _ := New(tt.Amount)
+
+			result, err := money.Multiply(tt.Multiplier)
+			if err != tt.ExpectedError {
+				t.Fatalf("expected error %v, got %v", tt.ExpectedError, err)
+			}
+
+			if result.Amount() != tt.Expected {
+				t.Errorf("expected amount %d, got %d", tt.Expected, result.Amount())
+			}
+		})
+	}
 }
