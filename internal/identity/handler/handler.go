@@ -1,20 +1,27 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
 
 	"github.com/Aneeshie/ecommerce/internal/httpx"
 	"github.com/Aneeshie/ecommerce/internal/identity/dto"
-	"github.com/Aneeshie/ecommerce/internal/identity/service"
 	"github.com/Aneeshie/ecommerce/internal/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
+type IdentityService interface {
+	Register(ctx context.Context, req dto.RegisterRequest) error
+	Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error)
+	Refresh(ctx context.Context, req dto.RefreshRequest) (dto.RefreshResponse, error)
+	GetCurrentUser(ctx context.Context, userId uuid.UUID) (*dto.MeResponse, error)
+}
+
 type Handler struct {
-	service *service.Service
+	service IdentityService
 }
 
 func RegisterRoutes(r chi.Router, h *Handler, auth *middleware.AuthMiddleware) {
@@ -25,7 +32,7 @@ func RegisterRoutes(r chi.Router, h *Handler, auth *middleware.AuthMiddleware) {
 	r.With(auth.Auth).Get("/auth/me", h.Me)
 }
 
-func NewHandler(s *service.Service) *Handler {
+func NewHandler(s IdentityService) *Handler {
 	return &Handler{
 		service: s,
 	}
