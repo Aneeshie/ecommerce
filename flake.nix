@@ -2,37 +2,37 @@
   description = "Development environment for Ecommerce";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
   };
 
   outputs = { self, nixpkgs }:
   let
-    system = "aarch64-darwin";
-
-    pkgs = import nixpkgs {
-      inherit system;
-    };
-
-    go-migrate-pg = pkgs.go-migrate.overrideAttrs (old: {
-      tags = [ "postgres" ];
-    });
-
+    supportedSystems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+    forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
   in {
-    devShells.${system}.default = pkgs.mkShell {
-      packages = with pkgs; [
-        go
-        go-migrate-pg
+    devShells = forAllSystems (system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+        
+        go-migrate-pg = pkgs.go-migrate.overrideAttrs (old: {
+          tags = [ "postgres" ];
+        });
+      in {
+        default = pkgs.mkShell {
+          packages = with pkgs; [
+            go
+            go-migrate-pg
+            git
+            gnumake
+            postgresql
+          ];
 
-        git
-        gnumake
-
-        postgresql
-      ];
-
-      shellHook = ''
-        echo " Ecommerce development environment"
-        echo "Go: $(go version)"
-      '';
-    };
+          shellHook = ''
+            echo " Ecommerce development environment"
+            echo "Go: $(go version)"
+          '';
+        };
+      }
+    );
   };
 }
