@@ -13,8 +13,8 @@ The project is being developed module-by-module, following industry conventions 
 - pgx
 - Chi Router
 - JWT Authentication
-- Docker
-- UUID
+- Docker & Testcontainers
+- GitHub Actions (CI/CD)
 - Swagger (API Documentation)
 
 ---
@@ -169,15 +169,34 @@ This avoids floating point precision issues.
 
 ---
 
-## Running
+## Running Locally
+
+To run the application locally, you will need a PostgreSQL database. You can start one using Docker Compose:
 
 ```bash
-git clone <repository>
-
+git clone git@github.com:Aneeshie/ecommerce.git
 cd ecommerce
 
-go run cmd/api/main.go
+# Start the local database
+docker-compose up -d
+
+# Run the API
+nix develop --command go run cmd/api/main.go
 ```
+
+---
+
+## Testing
+
+The project uses a robust integration testing setup leveraging `testcontainers-go`. When you run the test suite, it automatically spins up an isolated, throwaway PostgreSQL container, runs all the `golang-migrate` database migrations, and wraps each repository test in a transaction that is rolled back afterward.
+
+To run the full test suite:
+
+```bash
+nix develop --command go test -v ./...
+```
+
+*Note: If you are using OrbStack on macOS, the test infrastructure automatically routes to your OrbStack Docker socket.*
 
 ---
 
