@@ -134,7 +134,7 @@ func (s *Service) CreateOrder(ctx context.Context, userID uuid.UUID, req *dto.Cr
 	for _, item := range req.Items {
 		inventory, err := s.store.Inventory().GetInventoryByProductID(ctx, item.ProductID)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		if inventory.Quantity < item.Quantity {

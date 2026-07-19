@@ -29,7 +29,7 @@ func TestCreateOrder(t *testing.T) {
 		{
 			Name: "Successful Create",
 			Req: &dto.CreateOrderRequest{
-				Items: []dto.OrderItemRequest{
+				Items: []dto.CreateOrderItemRequest{
 					{ProductID: productID, Quantity: 2},
 				},
 			},
@@ -55,7 +55,7 @@ func TestCreateOrder(t *testing.T) {
 		{
 			Name: "Empty Order",
 			Req: &dto.CreateOrderRequest{
-				Items: []dto.OrderItemRequest{},
+				Items: []dto.CreateOrderItemRequest{},
 			},
 			SetupMock:     func(m *MockStore) {},
 			ExpectedError: order.ErrEmptyOrder,
@@ -63,7 +63,7 @@ func TestCreateOrder(t *testing.T) {
 		{
 			Name: "Insufficient Inventory",
 			Req: &dto.CreateOrderRequest{
-				Items: []dto.OrderItemRequest{
+				Items: []dto.CreateOrderItemRequest{
 					{ProductID: productID, Quantity: 5},
 				},
 			},
@@ -84,7 +84,7 @@ func TestCreateOrder(t *testing.T) {
 		{
 			Name: "Duplicate Product",
 			Req: &dto.CreateOrderRequest{
-				Items: []dto.OrderItemRequest{
+				Items: []dto.CreateOrderItemRequest{
 					{ProductID: productID, Quantity: 2},
 					{ProductID: productID, Quantity: 1},
 				},
@@ -95,7 +95,7 @@ func TestCreateOrder(t *testing.T) {
 		{
 			Name: "Transaction Begin Error",
 			Req: &dto.CreateOrderRequest{
-				Items: []dto.OrderItemRequest{
+				Items: []dto.CreateOrderItemRequest{
 					{ProductID: productID, Quantity: 2},
 				},
 			},

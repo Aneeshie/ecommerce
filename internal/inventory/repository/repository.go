@@ -56,6 +56,7 @@ func (r *Repository) GetInventoryByProductID(ctx context.Context, productID uuid
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, inventory.ErrNoProductFound
 		}
+		return nil, err
 	}
 
 	return &inv, nil

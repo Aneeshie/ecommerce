@@ -14,3 +14,7 @@ func ClaimsFromContext(ctx context.Context) (*token.CustomClaims, bool) {
 	claims, ok := ctx.Value(claimsContextKey).(*token.CustomClaims)
 	return claims, ok
 }
+
+func WithClaims(ctx context.Context, claims *token.CustomClaims) context.Context {
+	return context.WithValue(ctx, claimsContextKey, claims)
+}
