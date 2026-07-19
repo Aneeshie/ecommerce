@@ -29,8 +29,10 @@ var (
 func initPool(ctx context.Context) error {
 	var err error
 	poolOnce.Do(func() {
-		// OrbStack specific fix for Nix environment
-		os.Setenv("DOCKER_HOST", "unix:///Users/nara/.orbstack/run/docker.sock")
+		// OrbStack specific fix for Nix environment on macOS
+		if runtime.GOOS == "darwin" && os.Getenv("DOCKER_HOST") == "" {
+			os.Setenv("DOCKER_HOST", "unix:///Users/nara/.orbstack/run/docker.sock")
+		}
 
 		postgresContainer, errStart := tcpostgres.Run(ctx,
 			"postgres:16-alpine",
