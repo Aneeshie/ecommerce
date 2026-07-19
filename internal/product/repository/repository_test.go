@@ -23,6 +23,7 @@ func TestCreateAndGetProduct(t *testing.T) {
 		Name:        "Test Product",
 		Description: "A description",
 		Price:       amount,
+		Status:      domain.ProductStatusActive,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}

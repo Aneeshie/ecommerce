@@ -26,6 +26,7 @@ func TestCreateInventory(t *testing.T) {
 		Name:        "Test Product",
 		Description: "A test product",
 		Price:       amount,
+		Status:      productDomain.ProductStatusActive,
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
