@@ -9,12 +9,16 @@ import (
 	"runtime"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/testcontainers/testcontainers-go"
+	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 var (
@@ -25,21 +29,37 @@ var (
 func initPool(ctx context.Context) error {
 	var err error
 	poolOnce.Do(func() {
-		// Use a local database for testing since Docker is not available.
-		// Fallback to a default local postgres instance if TEST_DATABASE_URL is not provided.
-		dbURL := os.Getenv("TEST_DATABASE_URL")
-		if dbURL == "" {
-			// Assuming a local postgres instance with a test database
-			dbURL = "postgres://postgres:postgres@localhost:5432/ecommerce_test?sslmode=disable"
+		// OrbStack specific fix for Nix environment
+		os.Setenv("DOCKER_HOST", "unix:///Users/nara/.orbstack/run/docker.sock")
+
+		postgresContainer, errStart := tcpostgres.Run(ctx,
+			"postgres:16-alpine",
+			tcpostgres.WithDatabase("ecommerce_test"),
+			tcpostgres.WithUsername("testuser"),
+			tcpostgres.WithPassword("testpassword"),
+			testcontainers.WithWaitStrategy(
+				wait.ForLog("database system is ready to accept connections").
+					WithOccurrence(2).
+					WithStartupTimeout(5*time.Second)),
+		)
+		if errStart != nil {
+			err = errStart
+			return
+		}
+
+		connString, errConn := postgresContainer.ConnectionString(ctx, "sslmode=disable")
+		if errConn != nil {
+			err = errConn
+			return
 		}
 
 		// Run migrations
-		err = runMigrations(dbURL)
+		err = runMigrations(connString)
 		if err != nil {
 			return
 		}
 
-		config, errParse := pgxpool.ParseConfig(dbURL)
+		config, errParse := pgxpool.ParseConfig(connString)
 		if errParse != nil {
 			err = errParse
 			return
