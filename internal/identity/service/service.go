@@ -20,14 +20,22 @@ const (
 	RefreshTokenTTL = 30 * 24 * time.Hour
 )
 
+type UserStore interface {
+	FindByEmail(ctx context.Context, email string) (domain.User, error)
+	CreateRefreshToken(ctx context.Context, token domain.RefreshToken) error
+	FindRefreshTokenByHash(ctx context.Context, hash string) (domain.RefreshToken, error)
+	Create(ctx context.Context, user domain.User) error
+	FindByID(ctx context.Context, id uuid.UUID) (domain.User, error)
+}
+
 type Service struct {
-	store        *store.Store
+	users        UserStore
 	tokenManager *token.Manager
 }
 
 func NewService(store *store.Store, tokenManager *token.Manager) *Service {
 	return &Service{
-		store:        store,
+		users:        store.Users(),
 		tokenManager: tokenManager,
 	}
 }
@@ -37,7 +45,7 @@ func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
 		return identity.ErrEmailRequired
 	}
 
-	_, err := s.store.Users().FindByEmail(ctx, req.Email)
+	_, err := s.users.FindByEmail(ctx, req.Email)
 	if err == nil {
 		return identity.ErrEmailAlreadyExists
 	}
@@ -68,7 +76,7 @@ func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
 		UpdatedAt:     time.Now(),
 	}
 
-	err = s.store.Users().Create(ctx, user)
+	err = s.users.Create(ctx, user)
 
 	if err != nil {
 		return err
@@ -80,7 +88,7 @@ func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
 func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error) {
 	now := time.Now()
 	//check if user exists in first place
-	user, err := s.store.Users().FindByEmail(ctx, req.Email)
+	user, err := s.users.FindByEmail(ctx, req.Email)
 	if err != nil {
 		if errors.Is(err, identity.ErrUserNotFound) {
 			return dto.LoginResponse{}, identity.ErrInvalidCredentials
@@ -123,7 +131,7 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 	}
 
 	//call the repo thingy (put it in the database)
-	err = s.store.Users().CreateRefreshToken(ctx, refreshToken)
+	err = s.users.CreateRefreshToken(ctx, refreshToken)
 	if err != nil {
 		return dto.LoginResponse{}, err
 	}
@@ -144,7 +152,7 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.RefreshResponse, error) {
 	hashedRefreshToken := s.tokenManager.HashRefreshToken(req.RefreshToken)
 
-	refreshToken, err := s.store.Users().FindRefreshTokenByHash(ctx, hashedRefreshToken)
+	refreshToken, err := s.users.FindRefreshTokenByHash(ctx, hashedRefreshToken)
 
 	if refreshToken.RevokedAt != nil {
 		return dto.RefreshResponse{}, identity.ErrInvalidRefreshToken
@@ -154,7 +162,7 @@ func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.Refr
 		return dto.RefreshResponse{}, identity.ErrInvalidRefreshToken
 	}
 
-	user, err := s.store.Users().FindByID(ctx, refreshToken.UserID)
+	user, err := s.users.FindByID(ctx, refreshToken.UserID)
 	if err != nil {
 		return dto.RefreshResponse{}, err
 	}
@@ -164,7 +172,7 @@ func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.Refr
 	if err != nil {
 		return dto.RefreshResponse{}, err
 	}
-	//return dto.Refres.store.Users()nse
+	//return dto.Refres.usersnse
 	return dto.RefreshResponse{
 		AccessToken: accessToken,
 		ExpiresIn:   int(AccessTokenTTL.Seconds()),
@@ -173,7 +181,7 @@ func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.Refr
 }
 
 func (s *Service) GetCurrentUser(ctx context.Context, userId uuid.UUID) (*dto.MeResponse, error) {
-	user, err := s.store.Users().FindByID(ctx, userId)
+	user, err := s.users.FindByID(ctx, userId)
 	if err != nil {
 		return &dto.MeResponse{}, err
 	}
