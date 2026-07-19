@@ -14,13 +14,65 @@ import (
 	"github.com/google/uuid"
 )
 
-type Service struct {
-	store *store.Store
+type ProductRepository interface {
+	CreateProduct(ctx context.Context, product *domain.Product) error
+	ListProducts(ctx context.Context, limit int64) ([]*domain.Product, error)
+	GetProductByID(ctx context.Context, productId uuid.UUID) (*domain.Product, error)
+	UpdateProduct(ctx context.Context, prod *domain.Product) error
+	DeleteProduct(ctx context.Context, productID uuid.UUID) error
 }
 
-func NewService(store *store.Store) *Service {
+type InventoryRepository interface {
+	CreateInventory(ctx context.Context, inventory *inventoryDomain.Inventory) error
+}
+
+type TxStore interface {
+	Products() ProductRepository
+	Inventory() InventoryRepository
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
+}
+
+type Store interface {
+	Products() ProductRepository
+	Begin(ctx context.Context) (TxStore, error)
+}
+
+type storeWrapper struct {
+	*store.Store
+}
+
+func (w *storeWrapper) Products() ProductRepository {
+	return w.Store.Products()
+}
+
+func (w *storeWrapper) Begin(ctx context.Context) (TxStore, error) {
+	tx, err := w.Store.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &txWrapper{tx}, nil
+}
+
+type txWrapper struct {
+	*store.TxStore
+}
+
+func (t *txWrapper) Products() ProductRepository {
+	return t.TxStore.Products()
+}
+
+func (t *txWrapper) Inventory() InventoryRepository {
+	return t.TxStore.Inventory()
+}
+
+type Service struct {
+	store Store
+}
+
+func NewService(s *store.Store) *Service {
 	return &Service{
-		store: store,
+		store: &storeWrapper{s},
 	}
 }
 
