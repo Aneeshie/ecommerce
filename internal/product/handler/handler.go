@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -9,18 +10,25 @@ import (
 	"github.com/Aneeshie/ecommerce/internal/identity/domain"
 	"github.com/Aneeshie/ecommerce/internal/middleware"
 	"github.com/Aneeshie/ecommerce/internal/product/dto"
-	"github.com/Aneeshie/ecommerce/internal/product/service"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
 const LIMIT = 20
 
-type Handler struct {
-	service *service.Service
+type ProductService interface {
+	CreateProduct(ctx context.Context, req *dto.CreateProductRequest) (*dto.CreateProductResponse, error)
+	ListProducts(ctx context.Context, limit int64) ([]*dto.ProductResponse, error)
+	GetProductById(ctx context.Context, productId uuid.UUID) (*dto.ProductResponse, error)
+	UpdateProduct(ctx context.Context, productID uuid.UUID, prod *dto.UpdateProductRequest) error
+	DeleteProduct(ctx context.Context, productID uuid.UUID) error
 }
 
-func NewHandler(service *service.Service) *Handler {
+type Handler struct {
+	service ProductService
+}
+
+func NewHandler(service ProductService) *Handler {
 	return &Handler{
 		service: service,
 	}
