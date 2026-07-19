@@ -14,8 +14,6 @@ import (
 	"github.com/google/uuid"
 )
 
-var ()
-
 type OrderRepository interface {
 	CreateOrder(ctx context.Context, order *domain.Order) error
 	CreateOrderItems(ctx context.Context, orderItems []*domain.OrderItem) error
