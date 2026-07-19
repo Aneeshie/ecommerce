@@ -14,15 +14,84 @@ import (
 	"github.com/google/uuid"
 )
 
-var ()
-
-type Service struct {
-	store *store.Store
+type OrderRepository interface {
+	CreateOrder(ctx context.Context, order *domain.Order) error
+	CreateOrderItems(ctx context.Context, orderItems []*domain.OrderItem) error
+	DecreaseInventory(ctx context.Context, productID uuid.UUID, quantity int) error
+	GetOrdersByUserID(ctx context.Context, userID uuid.UUID) ([]*domain.Order, error)
+	GetOrderByID(ctx context.Context, userID uuid.UUID, orderID uuid.UUID) (*domain.Order, error)
 }
 
-func NewService(store *store.Store) *Service {
+type ProductRepository interface {
+	GetProductByID(ctx context.Context, productId uuid.UUID) (*productDomain.Product, error)
+}
+
+type InventoryRepository interface {
+	GetInventoryByProductID(ctx context.Context, productID uuid.UUID) (*inventoryDomain.Inventory, error)
+}
+
+type TxStore interface {
+	Orders() OrderRepository
+	Products() ProductRepository
+	Inventory() InventoryRepository
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
+}
+
+type Store interface {
+	Orders() OrderRepository
+	Products() ProductRepository
+	Inventory() InventoryRepository
+	Begin(ctx context.Context) (TxStore, error)
+}
+
+type storeWrapper struct {
+	*store.Store
+}
+
+func (w *storeWrapper) Orders() OrderRepository {
+	return w.Store.Orders()
+}
+
+func (w *storeWrapper) Products() ProductRepository {
+	return w.Store.Products()
+}
+
+func (w *storeWrapper) Inventory() InventoryRepository {
+	return w.Store.Inventory()
+}
+
+func (w *storeWrapper) Begin(ctx context.Context) (TxStore, error) {
+	tx, err := w.Store.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &txWrapper{tx}, nil
+}
+
+type txWrapper struct {
+	*store.TxStore
+}
+
+func (t *txWrapper) Orders() OrderRepository {
+	return t.TxStore.Orders()
+}
+
+func (t *txWrapper) Products() ProductRepository {
+	return t.TxStore.Products()
+}
+
+func (t *txWrapper) Inventory() InventoryRepository {
+	return t.TxStore.Inventory()
+}
+
+type Service struct {
+	store Store
+}
+
+func NewService(s *store.Store) *Service {
 	return &Service{
-		store: store,
+		store: &storeWrapper{s},
 	}
 }
 
@@ -65,7 +134,7 @@ func (s *Service) CreateOrder(ctx context.Context, userID uuid.UUID, req *dto.Cr
 	for _, item := range req.Items {
 		inventory, err := s.store.Inventory().GetInventoryByProductID(ctx, item.ProductID)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		if inventory.Quantity < item.Quantity {
