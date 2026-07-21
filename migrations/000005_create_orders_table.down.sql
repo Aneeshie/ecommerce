@@ -1,3 +1,0 @@
-DROP INDEX IF EXISTS CREATE INDEX idx_orders_user_id;
-
-DROP TABLE orders;

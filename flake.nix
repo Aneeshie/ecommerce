@@ -13,7 +13,7 @@
     devShells = forAllSystems (system:
       let
         pkgs = import nixpkgs { inherit system; };
-        
+
         go-migrate-pg = pkgs.go-migrate.overrideAttrs (old: {
           tags = [ "postgres" ];
         });
@@ -25,6 +25,7 @@
             git
             gnumake
             postgresql
+            bun
           ];
 
           shellHook = ''
