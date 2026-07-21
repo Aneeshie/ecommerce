@@ -21,10 +21,22 @@ jobs:
           nix_path: nixpkgs=channel:nixos-unstable
 
       - name: Lint and Vet
-        run: nix develop --command go vet ./...
+        run: |
+            nix develop --comand bash -c "
+              cd backend
+              go vet ./...
+            "
 
       - name: Build
-        run: nix develop --command go build -v ./cmd/api
+        run: |
+            nix develop --command bash -c "
+              cd backend/
+              go build -v ./cmd/api
+            "
 
       - name: Run tests
-        run: nix develop --command go test -v -count=1 ./...
+        run: |
+            nix develop --command bash -c "
+              cd backend/
+              go test -v -count=1 ./...
+            "
