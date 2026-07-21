@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Aneeshie/ecommerce/internal/identity/dto"
+	"github.com/Aneeshie/ecommerce/internal/identity/service"
 )
 
 func TestRegisterHandler(t *testing.T) {
@@ -27,14 +28,14 @@ func TestRegisterHandler(t *testing.T) {
 				Password: "Password123!",
 			},
 			SetupMock: func(m *MockIdentityService) {
-				m.RegisterFn = func(ctx context.Context, req dto.RegisterRequest) error {
-					return nil
+				m.RegisterFn = func(ctx context.Context, req dto.RegisterRequest) (*service.AuthTokens, error) {
+					return &service.AuthTokens{AccessToken: "access_token", RefreshToken: "refresh_token"}, nil
 				}
 			},
 			ExpectedStatus: http.StatusCreated,
 		},
 		{
-			Name: "Invalid Payload",
+			Name:    "Invalid Payload",
 			Payload: "invalid-json-string",
 			SetupMock: func(m *MockIdentityService) {
 				// Should not be called
@@ -49,8 +50,8 @@ func TestRegisterHandler(t *testing.T) {
 				Password: "Password123!",
 			},
 			SetupMock: func(m *MockIdentityService) {
-				m.RegisterFn = func(ctx context.Context, req dto.RegisterRequest) error {
-					return errors.New("some error")
+				m.RegisterFn = func(ctx context.Context, req dto.RegisterRequest) (*service.AuthTokens, error) {
+					return nil, errors.New("some error")
 				}
 			},
 			ExpectedStatus: http.StatusInternalServerError, // httpx.WriteError returns 500 for generic errors
@@ -63,7 +64,7 @@ func TestRegisterHandler(t *testing.T) {
 			if tt.SetupMock != nil {
 				tt.SetupMock(mockService)
 			}
-			handler := NewHandler(mockService)
+			handler := NewHandler(mockService, false)
 
 			var b []byte
 			if s, ok := tt.Payload.(string); ok {
@@ -80,6 +81,18 @@ func TestRegisterHandler(t *testing.T) {
 
 			if w.Code != tt.ExpectedStatus {
 				t.Fatalf("expected status %d got %d", tt.ExpectedStatus, w.Code)
+			}
+
+			if w.Code == http.StatusCreated {
+				cookies := w.Result().Cookies()
+				if len(cookies) != 2 {
+					t.Fatalf("expected 2 cookies, got %d", len(cookies))
+				}
+				for _, c := range cookies {
+					if !c.HttpOnly {
+						t.Errorf("expected cookie %s to be HttpOnly", c.Name)
+					}
+				}
 			}
 		})
 	}
@@ -99,14 +112,14 @@ func TestLoginHandler(t *testing.T) {
 				Password: "Password123!",
 			},
 			SetupMock: func(m *MockIdentityService) {
-				m.LoginFn = func(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error) {
-					return dto.LoginResponse{AccessToken: "token"}, nil
+				m.LoginFn = func(ctx context.Context, req dto.LoginRequest) (*service.AuthTokens, error) {
+					return &service.AuthTokens{AccessToken: "access_token", RefreshToken: "refresh_token"}, nil
 				}
 			},
 			ExpectedStatus: http.StatusOK,
 		},
 		{
-			Name: "Invalid Payload",
+			Name:    "Invalid Payload",
 			Payload: "invalid-json-string",
 			SetupMock: func(m *MockIdentityService) {
 			},
@@ -119,8 +132,8 @@ func TestLoginHandler(t *testing.T) {
 				Password: "Password123!",
 			},
 			SetupMock: func(m *MockIdentityService) {
-				m.LoginFn = func(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error) {
-					return dto.LoginResponse{}, errors.New("invalid credentials")
+				m.LoginFn = func(ctx context.Context, req dto.LoginRequest) (*service.AuthTokens, error) {
+					return &service.AuthTokens{}, errors.New("invalid credentials")
 				}
 			},
 			ExpectedStatus: http.StatusInternalServerError, // httpx.WriteError defaults to 500
@@ -133,7 +146,7 @@ func TestLoginHandler(t *testing.T) {
 			if tt.SetupMock != nil {
 				tt.SetupMock(mockService)
 			}
-			handler := NewHandler(mockService)
+			handler := NewHandler(mockService, false)
 
 			var b []byte
 			if s, ok := tt.Payload.(string); ok {
@@ -151,6 +164,18 @@ func TestLoginHandler(t *testing.T) {
 			if w.Code != tt.ExpectedStatus {
 				t.Fatalf("expected status %d got %d", tt.ExpectedStatus, w.Code)
 			}
+
+			if w.Code == http.StatusOK {
+				cookies := w.Result().Cookies()
+				if len(cookies) != 2 {
+					t.Fatalf("expected 2 cookies, got %d", len(cookies))
+				}
+				for _, c := range cookies {
+					if !c.HttpOnly {
+						t.Errorf("expected cookie %s to be HttpOnly", c.Name)
+					}
+				}
+			}
 		})
 	}
 }
@@ -158,37 +183,33 @@ func TestLoginHandler(t *testing.T) {
 func TestRefreshHandler(t *testing.T) {
 	tests := []struct {
 		Name           string
-		Payload        interface{}
+		CookieValue    string
 		SetupMock      func(m *MockIdentityService)
 		ExpectedStatus int
 	}{
 		{
-			Name: "Successful Refresh",
-			Payload: dto.RefreshRequest{
-				RefreshToken: "some-token",
-			},
+			Name:        "Successful Refresh",
+			CookieValue: "some-token",
 			SetupMock: func(m *MockIdentityService) {
-				m.RefreshFn = func(ctx context.Context, req dto.RefreshRequest) (dto.RefreshResponse, error) {
-					return dto.RefreshResponse{AccessToken: "new-token"}, nil
+				m.RefreshFn = func(ctx context.Context, refreshTokenString string) (string, error) {
+					return "new-token", nil
 				}
 			},
 			ExpectedStatus: http.StatusOK,
 		},
 		{
-			Name: "Invalid Payload",
-			Payload: "invalid-json-string",
+			Name:        "Missing Cookie",
+			CookieValue: "",
 			SetupMock: func(m *MockIdentityService) {
 			},
-			ExpectedStatus: http.StatusBadRequest,
+			ExpectedStatus: http.StatusUnauthorized,
 		},
 		{
-			Name: "Service Error",
-			Payload: dto.RefreshRequest{
-				RefreshToken: "some-token",
-			},
+			Name:        "Service Error",
+			CookieValue: "invalid-token",
 			SetupMock: func(m *MockIdentityService) {
-				m.RefreshFn = func(ctx context.Context, req dto.RefreshRequest) (dto.RefreshResponse, error) {
-					return dto.RefreshResponse{}, errors.New("invalid refresh token")
+				m.RefreshFn = func(ctx context.Context, refreshTokenString string) (string, error) {
+					return "", errors.New("invalid refresh token")
 				}
 			},
 			ExpectedStatus: http.StatusInternalServerError,
@@ -201,23 +222,28 @@ func TestRefreshHandler(t *testing.T) {
 			if tt.SetupMock != nil {
 				tt.SetupMock(mockService)
 			}
-			handler := NewHandler(mockService)
+			handler := NewHandler(mockService, false)
 
-			var b []byte
-			if s, ok := tt.Payload.(string); ok {
-				b = []byte(s)
-			} else {
-				b, _ = json.Marshal(tt.Payload)
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", nil)
+			if tt.CookieValue != "" {
+				req.AddCookie(&http.Cookie{Name: "refresh_token", Value: tt.CookieValue})
 			}
-
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/refresh", bytes.NewReader(b))
-			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 
 			handler.Refresh(w, req)
 
 			if w.Code != tt.ExpectedStatus {
 				t.Fatalf("expected status %d got %d", tt.ExpectedStatus, w.Code)
+			}
+
+			if w.Code == http.StatusOK {
+				cookies := w.Result().Cookies()
+				if len(cookies) != 1 {
+					t.Fatalf("expected 1 cookie (access_token), got %d", len(cookies))
+				}
+				if cookies[0].Name != "access_token" || !cookies[0].HttpOnly {
+					t.Errorf("expected HttpOnly access_token cookie")
+				}
 			}
 		})
 	}
@@ -243,7 +269,7 @@ func TestMeHandler(t *testing.T) {
 			if tt.SetupMock != nil {
 				tt.SetupMock(mockService)
 			}
-			handler := NewHandler(mockService)
+			handler := NewHandler(mockService, false)
 
 			req := httptest.NewRequest(http.MethodGet, "/auth/me", nil)
 			w := httptest.NewRecorder()

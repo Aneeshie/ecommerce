@@ -4,35 +4,36 @@ import (
 	"context"
 
 	"github.com/Aneeshie/ecommerce/internal/identity/dto"
+	"github.com/Aneeshie/ecommerce/internal/identity/service"
 	"github.com/google/uuid"
 )
 
 type MockIdentityService struct {
-	RegisterFn       func(ctx context.Context, req dto.RegisterRequest) error
-	LoginFn          func(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error)
-	RefreshFn        func(ctx context.Context, req dto.RefreshRequest) (dto.RefreshResponse, error)
+	RegisterFn       func(ctx context.Context, req dto.RegisterRequest) (*service.AuthTokens, error)
+	LoginFn          func(ctx context.Context, req dto.LoginRequest) (*service.AuthTokens, error)
+	RefreshFn        func(ctx context.Context, refreshTokenString string) (string, error)
 	GetCurrentUserFn func(ctx context.Context, userId uuid.UUID) (*dto.MeResponse, error)
 }
 
-func (m *MockIdentityService) Register(ctx context.Context, req dto.RegisterRequest) error {
+func (m *MockIdentityService) Register(ctx context.Context, req dto.RegisterRequest) (*service.AuthTokens, error) {
 	if m.RegisterFn != nil {
 		return m.RegisterFn(ctx, req)
 	}
-	return nil
+	return &service.AuthTokens{}, nil
 }
 
-func (m *MockIdentityService) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error) {
+func (m *MockIdentityService) Login(ctx context.Context, req dto.LoginRequest) (*service.AuthTokens, error) {
 	if m.LoginFn != nil {
 		return m.LoginFn(ctx, req)
 	}
-	return dto.LoginResponse{}, nil
+	return &service.AuthTokens{}, nil
 }
 
-func (m *MockIdentityService) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.RefreshResponse, error) {
+func (m *MockIdentityService) Refresh(ctx context.Context, refreshTokenString string) (string, error) {
 	if m.RefreshFn != nil {
-		return m.RefreshFn(ctx, req)
+		return m.RefreshFn(ctx, refreshTokenString)
 	}
-	return dto.RefreshResponse{}, nil
+	return "", nil
 }
 
 func (m *MockIdentityService) GetCurrentUser(ctx context.Context, userId uuid.UUID) (*dto.MeResponse, error) {
