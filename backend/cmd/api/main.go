@@ -39,7 +39,7 @@ func main() {
 
 	identityService := service.NewService(store, identityManager)
 
-	identityHandler := handler.NewHandler(identityService)
+	identityHandler := handler.NewHandler(identityService, cfg.Env == "production")
 
 	authMiddleware := md.NewAuthMiddleware(identityManager)
 

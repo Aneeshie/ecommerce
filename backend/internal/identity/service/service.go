@@ -108,34 +108,31 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (*AuthTokens,
 
 }
 
-func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.RefreshResponse, error) {
-	hashedRefreshToken := s.tokenManager.HashRefreshToken(req.RefreshToken)
+func (s *Service) Refresh(ctx context.Context, refreshTokenString string) (string, error) {
+	hashedRefreshToken := s.tokenManager.HashRefreshToken(refreshTokenString)
 
 	refreshToken, err := s.users.FindRefreshTokenByHash(ctx, hashedRefreshToken)
 
 	if refreshToken.RevokedAt != nil {
-		return dto.RefreshResponse{}, identity.ErrInvalidRefreshToken
+		return "", identity.ErrInvalidRefreshToken
 	}
 
 	if time.Now().After(refreshToken.ExpiresAt) {
-		return dto.RefreshResponse{}, identity.ErrInvalidRefreshToken
+		return "", identity.ErrInvalidRefreshToken
 	}
 
 	user, err := s.users.FindByID(ctx, refreshToken.UserID)
 	if err != nil {
-		return dto.RefreshResponse{}, err
+		return "", err
 	}
 
 	// generate new access token
 	accessToken, err := s.tokenManager.GenerateAccessToken(user, AccessTokenTTL)
 	if err != nil {
-		return dto.RefreshResponse{}, err
+		return "", err
 	}
-	//return dto.Refres.usersnse
-	return dto.RefreshResponse{
-		AccessToken: accessToken,
-		ExpiresIn:   int(AccessTokenTTL.Seconds()),
-	}, nil
+	
+	return accessToken, nil
 
 }
 
