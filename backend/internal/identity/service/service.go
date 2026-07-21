@@ -40,29 +40,29 @@ func NewService(store *store.Store, tokenManager *token.Manager) *Service {
 	}
 }
 
-func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
+func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) (*AuthTokens, error) {
 	if req.Email == "" {
-		return identity.ErrEmailRequired
+		return nil, identity.ErrEmailRequired
 	}
 
 	_, err := s.users.FindByEmail(ctx, req.Email)
 	if err == nil {
-		return identity.ErrEmailAlreadyExists
+		return nil, identity.ErrEmailAlreadyExists
 	}
 
 	if !errors.Is(err, identity.ErrUserNotFound) {
-		return err
+		return nil, err
 	}
 
 	err = validator.ValidatePassword(req.Password)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	hash, err := password.Hash(req.Password)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	user := domain.User{
@@ -79,73 +79,32 @@ func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
 	err = s.users.Create(ctx, user)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return s.generateTokens(ctx, &user)
+
 }
 
-func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error) {
-	now := time.Now()
+func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (*AuthTokens, error) {
 	//check if user exists in first place
 	user, err := s.users.FindByEmail(ctx, req.Email)
 	if err != nil {
 		if errors.Is(err, identity.ErrUserNotFound) {
-			return dto.LoginResponse{}, identity.ErrInvalidCredentials
+			return nil, identity.ErrInvalidCredentials
+
 		}
-		return dto.LoginResponse{}, err
+		return nil, err
 	}
 
 	// check if the password entered is correct
 	isValid := password.CompareHash(req.Password, user.PasswordHash)
 
 	if !isValid {
-		return dto.LoginResponse{}, identity.ErrInvalidCredentials
+		return nil, identity.ErrInvalidCredentials
 	}
 
-	// generate access token
-	accessToken, err := s.tokenManager.GenerateAccessToken(user, AccessTokenTTL)
-
-	if err != nil {
-
-		return dto.LoginResponse{}, err
-	}
-
-	// generate refresh token
-	rawRefreshToken, err := s.tokenManager.GenerateRefreshToken()
-	if err != nil {
-		return dto.LoginResponse{}, err
-	}
-
-	// hash refresh token
-	hashedRefreshToken := s.tokenManager.HashRefreshToken(rawRefreshToken)
-
-	// create refreshToken entity
-	refreshToken := domain.RefreshToken{
-		ID:        uuid.New(),
-		UserID:    user.ID,
-		TokenHash: hashedRefreshToken,
-		ExpiresAt: now.Add(RefreshTokenTTL),
-		CreatedAt: now,
-		RevokedAt: nil,
-	}
-
-	//call the repo thingy (put it in the database)
-	err = s.users.CreateRefreshToken(ctx, refreshToken)
-	if err != nil {
-		return dto.LoginResponse{}, err
-	}
-
-	if refreshToken.RevokedAt != nil {
-		return dto.LoginResponse{}, identity.ErrInvalidRefreshToken
-	}
-	//return loginResponse
-
-	return dto.LoginResponse{
-		AccessToken:  accessToken,
-		RefreshToken: rawRefreshToken,
-		ExpiresIn:    int(AccessTokenTTL.Seconds()),
-	}, nil
+	return s.generateTokens(ctx, &user)
 
 }
 
@@ -192,4 +151,46 @@ func (s *Service) GetCurrentUser(ctx context.Context, userId uuid.UUID) (*dto.Me
 		Email: user.Email,
 		Role:  user.Role,
 	}, nil
+}
+
+func (s *Service) generateTokens(ctx context.Context, user *domain.User) (*AuthTokens, error) {
+	now := time.Now()
+	// generate access token
+	accessToken, err := s.tokenManager.GenerateAccessToken(*user, AccessTokenTTL)
+
+	if err != nil {
+
+		return nil, err
+	}
+
+	// generate refresh token
+	rawRefreshToken, err := s.tokenManager.GenerateRefreshToken()
+	if err != nil {
+		return nil, err
+	}
+
+	// hash refresh token
+	hashedRefreshToken := s.tokenManager.HashRefreshToken(rawRefreshToken)
+
+	// create refreshToken entity
+	refreshToken := domain.RefreshToken{
+		ID:        uuid.New(),
+		UserID:    user.ID,
+		TokenHash: hashedRefreshToken,
+		ExpiresAt: now.Add(RefreshTokenTTL),
+		CreatedAt: now,
+		RevokedAt: nil,
+	}
+
+	//call the repo thingy (put it in the database)
+	err = s.users.CreateRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// if refreshToken.RevokedAt != nil {
+	// 	return nil, identity.ErrInvalidRefreshToken
+	// }
+
+	return &AuthTokens{AccessToken: accessToken, RefreshToken: rawRefreshToken}, nil
 }
