@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/Aneeshie/ecommerce/internal/identity/domain"
 	"github.com/Aneeshie/ecommerce/internal/identity/token"
@@ -25,15 +24,15 @@ func (a *AuthMiddleware) Auth(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-		tokenString, err := extractBearerToken(r)
+		tokenString, err := extractAccessToken(r)
 		if err != nil {
-			http.Error(w, "Authorization header missing", http.StatusUnauthorized)
+			http.Error(w, "Access token cookie missing", http.StatusUnauthorized)
 			return
 		}
 
 		customClaims, err := a.tokenManager.VerifyAccessToken(tokenString)
 		if err != nil {
-			http.Error(w, "Authorization header missing", http.StatusUnauthorized)
+			http.Error(w, "invalid or expired access token", http.StatusUnauthorized)
 			return
 		}
 
@@ -44,18 +43,13 @@ func (a *AuthMiddleware) Auth(next http.Handler) http.Handler {
 
 }
 
-func extractBearerToken(r *http.Request) (string, error) {
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		return "", fmt.Errorf("empty jwt token")
+func extractAccessToken(r *http.Request) (string, error) {
+	cookie, err := r.Cookie("access_token")
+	if err != nil {
+		return "", fmt.Errorf("access token cookie not found: %v", err)
 	}
 
-	parts := strings.Split(authHeader, " ")
-	if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-		return "", fmt.Errorf("invalid format")
-	}
-
-	return parts[1], nil
+	return cookie.Value, nil
 }
 
 func (a *AuthMiddleware) RequireRole(role domain.Role) func(http.Handler) http.Handler {

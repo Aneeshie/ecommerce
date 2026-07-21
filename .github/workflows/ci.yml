@@ -22,7 +22,7 @@ jobs:
 
       - name: Lint and Vet
         run: |
-            nix develop --comand bash -c "
+            nix develop --command bash -c "
               cd backend
               go vet ./...
             "

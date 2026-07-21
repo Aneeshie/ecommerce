@@ -40,29 +40,29 @@ func NewService(store *store.Store, tokenManager *token.Manager) *Service {
 	}
 }
 
-func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
+func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) (*AuthTokens, error) {
 	if req.Email == "" {
-		return identity.ErrEmailRequired
+		return nil, identity.ErrEmailRequired
 	}
 
 	_, err := s.users.FindByEmail(ctx, req.Email)
 	if err == nil {
-		return identity.ErrEmailAlreadyExists
+		return nil, identity.ErrEmailAlreadyExists
 	}
 
 	if !errors.Is(err, identity.ErrUserNotFound) {
-		return err
+		return nil, err
 	}
 
 	err = validator.ValidatePassword(req.Password)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	hash, err := password.Hash(req.Password)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	user := domain.User{
@@ -79,42 +79,91 @@ func (s *Service) Register(ctx context.Context, req dto.RegisterRequest) error {
 	err = s.users.Create(ctx, user)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return s.generateTokens(ctx, &user)
+
 }
 
-func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginResponse, error) {
-	now := time.Now()
+func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (*AuthTokens, error) {
 	//check if user exists in first place
 	user, err := s.users.FindByEmail(ctx, req.Email)
 	if err != nil {
 		if errors.Is(err, identity.ErrUserNotFound) {
-			return dto.LoginResponse{}, identity.ErrInvalidCredentials
+			return nil, identity.ErrInvalidCredentials
+
 		}
-		return dto.LoginResponse{}, err
+		return nil, err
 	}
 
 	// check if the password entered is correct
 	isValid := password.CompareHash(req.Password, user.PasswordHash)
 
 	if !isValid {
-		return dto.LoginResponse{}, identity.ErrInvalidCredentials
+		return nil, identity.ErrInvalidCredentials
 	}
 
-	// generate access token
+	return s.generateTokens(ctx, &user)
+
+}
+
+func (s *Service) Refresh(ctx context.Context, refreshTokenString string) (string, error) {
+	hashedRefreshToken := s.tokenManager.HashRefreshToken(refreshTokenString)
+
+	refreshToken, err := s.users.FindRefreshTokenByHash(ctx, hashedRefreshToken)
+
+	if refreshToken.RevokedAt != nil {
+		return "", identity.ErrInvalidRefreshToken
+	}
+
+	if time.Now().After(refreshToken.ExpiresAt) {
+		return "", identity.ErrInvalidRefreshToken
+	}
+
+	user, err := s.users.FindByID(ctx, refreshToken.UserID)
+	if err != nil {
+		return "", err
+	}
+
+	// generate new access token
 	accessToken, err := s.tokenManager.GenerateAccessToken(user, AccessTokenTTL)
+	if err != nil {
+		return "", err
+	}
+	
+	return accessToken, nil
+
+}
+
+func (s *Service) GetCurrentUser(ctx context.Context, userId uuid.UUID) (*dto.MeResponse, error) {
+	user, err := s.users.FindByID(ctx, userId)
+	if err != nil {
+		return &dto.MeResponse{}, err
+	}
+
+	return &dto.MeResponse{
+		ID:    user.ID,
+		Name:  user.Name,
+		Email: user.Email,
+		Role:  user.Role,
+	}, nil
+}
+
+func (s *Service) generateTokens(ctx context.Context, user *domain.User) (*AuthTokens, error) {
+	now := time.Now()
+	// generate access token
+	accessToken, err := s.tokenManager.GenerateAccessToken(*user, AccessTokenTTL)
 
 	if err != nil {
 
-		return dto.LoginResponse{}, err
+		return nil, err
 	}
 
 	// generate refresh token
 	rawRefreshToken, err := s.tokenManager.GenerateRefreshToken()
 	if err != nil {
-		return dto.LoginResponse{}, err
+		return nil, err
 	}
 
 	// hash refresh token
@@ -133,63 +182,12 @@ func (s *Service) Login(ctx context.Context, req dto.LoginRequest) (dto.LoginRes
 	//call the repo thingy (put it in the database)
 	err = s.users.CreateRefreshToken(ctx, refreshToken)
 	if err != nil {
-		return dto.LoginResponse{}, err
+		return nil, err
 	}
 
-	if refreshToken.RevokedAt != nil {
-		return dto.LoginResponse{}, identity.ErrInvalidRefreshToken
-	}
-	//return loginResponse
+	// if refreshToken.RevokedAt != nil {
+	// 	return nil, identity.ErrInvalidRefreshToken
+	// }
 
-	return dto.LoginResponse{
-		AccessToken:  accessToken,
-		RefreshToken: rawRefreshToken,
-		ExpiresIn:    int(AccessTokenTTL.Seconds()),
-	}, nil
-
-}
-
-func (s *Service) Refresh(ctx context.Context, req dto.RefreshRequest) (dto.RefreshResponse, error) {
-	hashedRefreshToken := s.tokenManager.HashRefreshToken(req.RefreshToken)
-
-	refreshToken, err := s.users.FindRefreshTokenByHash(ctx, hashedRefreshToken)
-
-	if refreshToken.RevokedAt != nil {
-		return dto.RefreshResponse{}, identity.ErrInvalidRefreshToken
-	}
-
-	if time.Now().After(refreshToken.ExpiresAt) {
-		return dto.RefreshResponse{}, identity.ErrInvalidRefreshToken
-	}
-
-	user, err := s.users.FindByID(ctx, refreshToken.UserID)
-	if err != nil {
-		return dto.RefreshResponse{}, err
-	}
-
-	// generate new access token
-	accessToken, err := s.tokenManager.GenerateAccessToken(user, AccessTokenTTL)
-	if err != nil {
-		return dto.RefreshResponse{}, err
-	}
-	//return dto.Refres.usersnse
-	return dto.RefreshResponse{
-		AccessToken: accessToken,
-		ExpiresIn:   int(AccessTokenTTL.Seconds()),
-	}, nil
-
-}
-
-func (s *Service) GetCurrentUser(ctx context.Context, userId uuid.UUID) (*dto.MeResponse, error) {
-	user, err := s.users.FindByID(ctx, userId)
-	if err != nil {
-		return &dto.MeResponse{}, err
-	}
-
-	return &dto.MeResponse{
-		ID:    user.ID,
-		Name:  user.Name,
-		Email: user.Email,
-		Role:  user.Role,
-	}, nil
+	return &AuthTokens{AccessToken: accessToken, RefreshToken: rawRefreshToken}, nil
 }

@@ -98,7 +98,8 @@ func TestRegister(t *testing.T) {
 			}
 
 			service := &Service{
-				users: mock,
+				users:        mock,
+				tokenManager: token.NewManager("test"),
 			}
 
 			req := baseReq
@@ -106,15 +107,24 @@ func TestRegister(t *testing.T) {
 				tt.reqModifier(&req)
 			}
 
-			err := service.Register(context.Background(), req)
+			//TODO
+			tokens, err := service.Register(context.Background(), req)
 
 			// We use string comparison for dynamic errors like "database error" if they don't match exactly by pointer
 			if tt.expectedError != nil {
 				if err == nil || err.Error() != tt.expectedError.Error() {
 					t.Fatalf("expected error %v got %v", tt.expectedError, err)
 				}
-			} else if err != nil {
-				t.Fatalf("expected nil error got %v", err)
+			} else {
+				if err != nil {
+					t.Fatalf("expected nil error got %v", err)
+				}
+				if tokens == nil {
+					t.Fatalf("expected tokens to not be nil on success")
+				}
+				if tokens.AccessToken == "" || tokens.RefreshToken == "" {
+					t.Fatalf("expected tokens to be populated, got access: %q, refresh: %q", tokens.AccessToken, tokens.RefreshToken)
+				}
 			}
 		})
 	}
@@ -183,14 +193,22 @@ func TestLogin(t *testing.T) {
 				tokenManager: tm,
 			}
 
-			_, err := service.Login(context.Background(), tt.req)
+			tokens, err := service.Login(context.Background(), tt.req)
 
 			if tt.expectedError != nil {
 				if err == nil || err.Error() != tt.expectedError.Error() {
 					t.Fatalf("expected error %v got %v", tt.expectedError, err)
 				}
-			} else if err != nil {
-				t.Fatalf("expected nil error got %v", err)
+			} else {
+				if err != nil {
+					t.Fatalf("expected nil error got %v", err)
+				}
+				if tokens == nil {
+					t.Fatalf("expected tokens to not be nil on success")
+				}
+				if tokens.AccessToken == "" || tokens.RefreshToken == "" {
+					t.Fatalf("expected tokens to be populated, got access: %q, refresh: %q", tokens.AccessToken, tokens.RefreshToken)
+				}
 			}
 		})
 	}
@@ -207,13 +225,13 @@ func TestRefresh(t *testing.T) {
 
 	tests := []struct {
 		Name          string
-		req           dto.RefreshRequest
+		req           string
 		setupMock     func(*MockUserStore)
 		expectedError error
 	}{
 		{
 			Name: "Successful Refresh",
-			req:  dto.RefreshRequest{RefreshToken: "valid-token"},
+			req:  "valid-token",
 			setupMock: func(m *MockUserStore) {
 				m.FindRefreshTokenByHashFn = func(ctx context.Context, hash string) (domain.RefreshToken, error) {
 					return domain.RefreshToken{
@@ -229,7 +247,7 @@ func TestRefresh(t *testing.T) {
 		},
 		{
 			Name: "Expired Token",
-			req:  dto.RefreshRequest{RefreshToken: "expired-token"},
+			req:  "expired-token",
 			setupMock: func(m *MockUserStore) {
 				m.FindRefreshTokenByHashFn = func(ctx context.Context, hash string) (domain.RefreshToken, error) {
 					return domain.RefreshToken{
@@ -242,7 +260,7 @@ func TestRefresh(t *testing.T) {
 		},
 		{
 			Name: "Revoked Token",
-			req:  dto.RefreshRequest{RefreshToken: "revoked-token"},
+			req:  "revoked-token",
 			setupMock: func(m *MockUserStore) {
 				m.FindRefreshTokenByHashFn = func(ctx context.Context, hash string) (domain.RefreshToken, error) {
 					revokedAt := now.Add(-1 * time.Hour)
@@ -269,14 +287,19 @@ func TestRefresh(t *testing.T) {
 				tokenManager: tm,
 			}
 
-			_, err := service.Refresh(context.Background(), tt.req)
+			accessToken, err := service.Refresh(context.Background(), tt.req)
 
 			if tt.expectedError != nil {
 				if err == nil || err.Error() != tt.expectedError.Error() {
 					t.Fatalf("expected error %v got %v", tt.expectedError, err)
 				}
-			} else if err != nil {
-				t.Fatalf("expected nil error got %v", err)
+			} else {
+				if err != nil {
+					t.Fatalf("expected nil error got %v", err)
+				}
+				if accessToken == "" {
+					t.Fatalf("expected access token to not be empty")
+				}
 			}
 		})
 	}
