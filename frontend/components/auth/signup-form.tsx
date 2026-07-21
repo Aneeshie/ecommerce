@@ -10,6 +10,7 @@ import { Input } from "../ui/input"
 import { PasswordInput } from "./password-input"
 import { useRouter } from "next/navigation"
 import z from "zod"
+import { useUserStore } from "@/stores/auth-store"
 
 const formSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters."),
@@ -26,6 +27,8 @@ const formSchema = z.object({
 export function SignUpForm() {
 
   const router = useRouter()
+
+  const {setUser} = useUserStore()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -54,6 +57,20 @@ export function SignUpForm() {
             toast.error(err.message ?? "SignUp failed")
             return;
           }
+          const meResp = await fetch("http://localhost:8080/api/v1/auth/me", {
+            credentials: "include"
+          })
+
+          if (!meResp.ok) {
+            const err = await meResp.json();
+            toast.error(err.message ?? "failed to get me resp")
+            return;
+          }
+
+          const user = await meResp.json();
+
+          setUser(user)
+
           toast.success("Account created successfully!")
           router.push("/")
         } catch (err) {

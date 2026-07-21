@@ -10,7 +10,7 @@ type UserStore = {
   setLoading: (isLoading: boolean) => void
 }
 
-const useUserStore = create<UserStore>((set) => ({
+export const useUserStore = create<UserStore>((set) => ({
   user: null,
   loading: true,
 

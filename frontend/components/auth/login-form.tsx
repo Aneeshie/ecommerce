@@ -10,6 +10,8 @@ import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { PasswordInput } from "./password-input"
 import { useRouter } from "next/navigation"
+import { User } from "@/types/user"
+import { useUserStore } from "@/stores/auth-store"
 
 const formSchema = z.object({
   email: z.email(),
@@ -19,6 +21,8 @@ const formSchema = z.object({
 export function LoginForm() {
 
   const router = useRouter()
+
+  const {setUser} = useUserStore()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -46,6 +50,21 @@ export function LoginForm() {
         toast.error(err.message ?? "Login failed")
         return;
       }
+
+      const meResp = await fetch("http://localhost:8080/api/v1/auth/me", {
+        credentials: "include"
+      })
+
+      if (!meResp.ok) {
+        const err = await meResp.json();
+        toast.error(err.message ?? "failed to get me resp")
+        return;
+      }
+
+      const user = await meResp.json();
+
+      setUser(user)
+
       toast.success("Login successfull!")
       router.push("/")
     } catch (err) {
