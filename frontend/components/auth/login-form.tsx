@@ -9,6 +9,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "../ui/field"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { PasswordInput } from "./password-input"
+import { useRouter } from "next/navigation"
 
 const formSchema = z.object({
   email: z.email(),
@@ -16,6 +17,8 @@ const formSchema = z.object({
 })
 
 export function LoginForm() {
+
+  const router = useRouter()
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -38,10 +41,16 @@ export function LoginForm() {
         body: JSON.stringify({email: data.email, password: data.password})
       })
 
+      if (!resp.ok) {
+        const err = await resp.json();
+        toast.error(err.message ?? "Login failed")
+        return;
+      }
       toast.success("Login successfull!")
+      router.push("/")
     } catch (err) {
-      toast.error("Login failed")
-      console.log(err)
+      toast.error("Network error")
+      console.error(err)
     }
   }
 
