@@ -3,11 +3,12 @@
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Controller, useForm } from "react-hook-form"
 import { toast } from "sonner"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "../ui/card"
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "../ui/card"
 import { Field, FieldError, FieldGroup, FieldLabel } from "../ui/field"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import { PasswordInput } from "./password-input"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import z from "zod"
 import { useUserStore } from "@/stores/auth-store"
@@ -75,18 +76,18 @@ export function SignUpForm() {
           router.push("/")
         } catch (err) {
           toast.error("Network error")
-          console.error(err)
         }
   }
 
     return (
-      <Card className="w-full sm:max-w-md">
-        <CardHeader>
-          <CardTitle>Login Page</CardTitle>
+      <Card className="w-full sm:max-w-md shadow-2xl border-white/5 bg-zinc-950/50 backdrop-blur-xl">
+        <CardHeader className="space-y-2 pb-6 text-center">
+          <CardTitle className="text-2xl font-semibold tracking-tight">Create an account</CardTitle>
+          <CardDescription>Enter your details below to get started.</CardDescription>
         </CardHeader>
         <CardContent>
           <form id="form-rhf-signup" onSubmit={form.handleSubmit(onSubmit)}>
-            <FieldGroup>
+            <FieldGroup className="space-y-4">
               <Controller
                 name="name"
                 control={form.control}
@@ -154,15 +155,16 @@ export function SignUpForm() {
             </FieldGroup>
           </form>
         </CardContent>
-        <CardFooter>
-          <Field orientation="horizontal">
-            <Button type="button" variant="outline" onClick={() => form.reset()}>
-              Reset
-            </Button>
-            <Button type="submit" form="form-rhf-signup">
-              Submit
-            </Button>
-          </Field>
+        <CardFooter className="flex flex-col gap-4 pb-8">
+          <Button type="submit" form="form-rhf-signup" className="w-full h-11 text-base font-medium shadow-sm transition-all hover:scale-[1.02]">
+            Sign Up
+          </Button>
+          <div className="text-center text-sm text-zinc-500 mt-2">
+            Already have an account?{" "}
+            <Link href="/login" className="text-zinc-300 hover:text-white hover:underline transition-colors">
+              Log in
+            </Link>
+          </div>
         </CardFooter>
       </Card>
     )}
