@@ -31,7 +31,7 @@ func RegisterRoutes(r chi.Router, h *Handler, auth *middleware.AuthMiddleware) {
 	r.Post("/api/v1/auth/login", h.Login)
 	r.Post("/api/v1/auth/refresh", h.Refresh)
 
-	r.With(auth.Auth).Get("/auth/me", h.Me)
+	r.With(auth.Auth).Get("/api/v1/auth/me", h.Me)
 }
 
 func NewHandler(s IdentityService, cookieSecure bool) *Handler {
